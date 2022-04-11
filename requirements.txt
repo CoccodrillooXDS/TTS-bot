@@ -1,0 +1,7 @@
+py-cord>=2.0.0b0
+py-cord[voice]>=2.0.0b0
+gtts
+waiting
+asyncio
+nest_asyncio
+ibm-cos-sdk
