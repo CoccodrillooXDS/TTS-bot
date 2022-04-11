@@ -87,7 +87,7 @@ If you decide to host the bot on your own server, you will have to export the to
 
 ## Heroku deployment
 
-If you decide to host the bot on Heroku, you will have to set the token and your Discord id in the Heroku environment variables with the CLI or from the web panel, in the "**Config Vars**" section in **Settings**.
+If you decide to host the bot on Heroku, you will have to set the token and your Discord id in the Heroku environment variables with the Heroku CLI or from the web panel, in the "**Config Vars**" section in **Settings**.
 
 **_CLI commands_**
 
