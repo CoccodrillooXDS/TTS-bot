@@ -187,8 +187,7 @@ async def _say(ctx, *args):
     if await ensure_voice(ctx):
         await ctx.defer()
         author = ctx.author.id
-        print(args)
-        lang = ' '.join(args[0])
+        lang = args[0]
         lang = lang.lower()
         text = ' '.join(args[1:])
         texta = text.lower()
