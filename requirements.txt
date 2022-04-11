@@ -1,5 +1,6 @@
 py-cord>=2.0.0b0
 py-cord[voice]>=2.0.0b0
+PyNaCl
 gtts
 waiting
 asyncio
