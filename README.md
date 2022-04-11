@@ -19,12 +19,10 @@
 - [License](#license)
 - [TODO](#todo)
 
----
 # Overview
 
 TTS is a **Text-to-Speech** bot for Discord. It uses the **[gTTS](https://pypi.org/project/gTTS/)** library to generate audio files from text. The bot then plays the audio file in the voice channel so other people don't have to stop what they are doing to read what you wrote.
 
----
 # Features
 
 * Give your text a voice!
@@ -35,7 +33,6 @@ TTS is a **Text-to-Speech** bot for Discord. It uses the **[gTTS](https://pypi.o
 * Easy to use!
 * It's free!
 
----
 # Installation
 
 **The officially supported platforms are:**
@@ -113,7 +110,6 @@ You will be able to add your bot using this link:
 
 **NOTE**: you have to change the ```<your-bot-client-id>``` to your client id. You can get it from the [developer portal](https://discord.com/developers/applications).
 
----
 # Contributing
 You can contribute to the project by making a pull request here or by creating an issue.
 
@@ -121,12 +117,10 @@ You can also contribute by translating the bot to your language. Make sure to fo
 
 **Note** Some languages may have problems with the bot.
 
----
 # License
 This project is licensed under the [MIT license](LICENSE)
 
 
----
 # TODO
 
 - [ ] Implement Google Search Engine
