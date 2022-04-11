@@ -292,7 +292,7 @@ class setrole(Modal):
         config.read(os.path.join(configs, str(interaction.guild.id)))
         if not role:
             role = await interaction.guild.create_role(name=self.children[0].value)
-        interaction.user.add_roles(role)
+        await interaction.user.add_roles(role)
         config['DEFAULT']['role'] = self.children[0].value
         with open(os.path.join(configs, str(interaction.guild.id)), 'w') as configfile:
             config.write(configfile)
