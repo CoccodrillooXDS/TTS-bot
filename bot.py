@@ -255,8 +255,8 @@ def download_configs():
         files = cos.Bucket(bucket_name).objects.all()
         for file in files:
             if file.key.startswith(remote_dir):
-                remote_file = os.path.join(remote_dir, file.key.replace(remote_dir + '\\', ''))
-                local_file = os.path.join(configs, file.key.replace(remote_dir + '\\', ''))
+                remote_file = file.key
+                local_file = os.path.join(configs, file.key[len(remote_dir)+1:])
                 cos.Object(bucket_name, file.key).download_file(local_file)
     except ClientError as be:
         print("IBM CLIENT ERROR: {0}\n".format(be))
