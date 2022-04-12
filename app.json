@@ -5,7 +5,7 @@
     "keywords": ["TTS", "Text-To-Speech", "TextToSpeech", "Docker", "Discord", "bot", "ds", "Python", "Heroku"],
     "env": {
         "TOKEN": {
-            "description": "The Discord bot token"
+            "description": "Discord bot token"
         },
         "COS_API_KEY_ID": {
             "description": "API Key generated from IBM Cloud",
