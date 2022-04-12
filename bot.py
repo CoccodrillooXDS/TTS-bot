@@ -490,24 +490,6 @@ async def check_update():
         if r.status_code == 200:
             with open(os.path.join(root, 'version.ini'), 'r') as f:
                     version = f.read()
-            if int(version) > r.json()['id'] and bot_version != r.json()['tag_name']:
-                print(f"-> Bot version ({bot_version}) is newer than the latest version ({r.json()['tag_name']}), skipping update...")
-                return
-            if bot_version != r.json()['tag_name'] and int(version) == r.json()['id']:
-                print(f"-> Bot version ({bot_version}) is newer than the latest version ({r.json()['tag_name']}), skipping update...")
-                return
-            if r.json()['tag_name'] != bot_version:
-                print(f"-> New version {r.json()['tag_name']} available!")
-                voice_client = discord.utils.get(bot.voice_clients)
-                if not voice_client:
-                    print(f"-> Updating to {r.json()['tag_name']}...")
-                    await bot.get_user(bot.owner_id).send(f"A new version ({r.json()['tag_name']}) is now available! Trying to update right now... (This will take a minute)")
-                    subprocess.call("git pull --force", shell=True)
-                    subprocess.Popen("python3 -u bot.py", close_fds=False, shell=True)
-                    await bot.close()
-                else:
-                    print(f"-> Bot is connected to a voice channel, skipping update...")
-                    await bot.get_user(bot.owner_id).send(f"A new version ({r.json()['tag_name']}) is now available! I will try to install it automatically in 30 minutes.")
             if int(version) != r.json()['id']:
                 changelog = r.json()['body']
                 id = r.json()['id']
@@ -520,13 +502,13 @@ async def check_update():
                 for guild in bot.guilds:
                     ctx = guild
                     embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'updatetitle')), description=eval("f" + get_guild_language(ctx, 'updatedesc')), color=0x286fad)
-                    # try:
-                    #     await guild.get_channel(guild.system_channel.id).send(embed=embed)
-                    # except AttributeError:
-                    #     for channel in guild.text_channels:
-                    #         if channel.permissions_for(guild.me).send_messages:
-                    #             await channel.send(embed=embed)
-                    #             break
+                    try:
+                        await guild.get_channel(guild.system_channel.id).send(embed=embed)
+                    except AttributeError:
+                        for channel in guild.text_channels:
+                            if channel.permissions_for(guild.me).send_messages:
+                                await channel.send(embed=embed)
+                                break
         elif r.status_code == 403:
             print("-> Unable to check for bot updates! We have been rate limited by GitHub, checking for updates later...")
     except Exception as e:
