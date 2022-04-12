@@ -227,8 +227,7 @@ def download_version():
         files = cos.Bucket(bucket_name).objects.all()
         for file in files:
             if file.key == object_name:
-                file.download_file(download_version)
-                return True
+                cos.Object(bucket_name, object_name).download_file(download_version)
     except ClientError as be:
         print("IBM CLIENT ERROR: {0}\n".format(be))
     except Exception as e:
@@ -252,21 +251,17 @@ def upload_configs():
 def download_configs():
     global bucket_name, use_ibm, configs
     remote_dir = 'configs'
-    local_download_directory = configs
-    for root, dirs, files in os.walk(local_download_directory):
+    try:
+        files = cos.Bucket(bucket_name).objects.all()
         for file in files:
-            local_file = os.path.join(root, file)
-            remote_file = os.path.join(remote_dir, file)
-            try:
-                files = cos.Bucket(bucket_name).objects.all()
-                for file in files:
-                    if file.key == remote_file:
-                        file.download_file(local_file)
-                        return True
-            except ClientError as be:
-                print("IBM CLIENT ERROR: {0}\n".format(be))
-            except Exception as e:
-                print("Unable to download {0}: {1}".format(remote_file, e))
+            if file.key.startswith(remote_dir):
+                remote_file = os.path.join(remote_dir, file.key.replace(remote_dir + '\\', ''))
+                local_file = os.path.join(configs, file.key.replace(remote_dir + '\\', ''))
+                cos.Object(bucket_name, file.key).download_file(local_file)
+    except ClientError as be:
+        print("IBM CLIENT ERROR: {0}\n".format(be))
+    except Exception as e:
+        print("Unable to download {0}: {1}".format(remote_file, e))
 
 def delete_config(item):
     global bucket_name, use_ibm
@@ -606,8 +601,6 @@ async def on_ready():
     an += 1
     print(f"Creating directories... (Step {str(an)}/{str(n)})")
     os.makedirs(temp)
-    if use_ibm:
-        download_configs()
     for guild in guilds:
         new_fold = os.path.join(temp, guild)
         os.mkdir(new_fold)
@@ -616,6 +609,8 @@ async def on_ready():
     print(f"Directories created (Step {str(an)}/{str(n)})")
     an += 1
     print(f"Loading guild configs... (Step {str(an)}/{str(n)})")
+    if use_ibm:
+        download_configs()
     for guild in bot.guilds:
         if not os.path.exists(os.path.join(configs, str(guild.id))):
             config = configparser.ConfigParser()
