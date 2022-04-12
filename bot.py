@@ -14,6 +14,8 @@ import traceback
 import discord
 import nest_asyncio
 import requests
+import ibm_boto3
+from ibm_botocore.client import Config, ClientError
 from discord.commands import Option
 from discord.ext import commands, tasks, bridge
 from discord.ui import Button, InputText, Modal, Select, View
@@ -33,7 +35,7 @@ bot = bridge.Bot(
     auto_sync_commands=True,
 )
 
-bot_version = "v3.0.0b.1"
+bot_version = "v3.0.0b.2"
 
 # --------------------------------------------------
 # Folders
@@ -45,7 +47,7 @@ configs = os.path.join(os.path.dirname(os.path.abspath(__file__)),'configs')
 langfolder = os.path.join(os.path.dirname(os.path.abspath(__file__)),'lang')
 
 # --------------------------------------------------
-# Languages
+# Variables
 # --------------------------------------------------
 
 supported_languages_message = ""
@@ -54,6 +56,8 @@ allroles = []
 installed_langs = []
 
 TOKEN = ""
+
+use_ibm = False
 
 # --------------------------------------------------
 # Internal functions
@@ -165,6 +169,115 @@ def noplay(ctx):
         return False
     else:
         return True
+
+# --------------------------------------------------
+# IBM Cloud Internal functions
+# --------------------------------------------------
+
+def create_bucket():
+    global use_ibm, bucket_name
+    print(f"Creating a new bucket called: {bucket_name}")
+    try:
+        cos.Bucket(bucket_name).create(
+            CreateBucketConfiguration={
+                "LocationConstraint":'eu-de-flex'
+            }
+        )
+        print(f"Bucket: {bucket_name} created!")
+    except ClientError as be:
+        print("IBM CLIENT ERROR: {0}\n".format(be))
+        use_ibm = False
+    except Exception as e:
+        print("Unable to create bucket: {0}".format(e))
+        use_ibm = False
+
+def get_bucket():
+    global bucket_name, use_ibm
+    print("Loading buckets...")
+    try:
+        buckets = cos.buckets.all()
+        for bucket in buckets:
+            if bucket.name == bucket_name:
+                print(f"Bucket: {bucket_name} found!")
+                return True
+        return False
+    except ClientError as be:
+        print("IBM CLIENT ERROR: {0}\n".format(be))
+        use_ibm = False
+    except Exception as e:
+        print("Unable to retrieve the list of buckets: {0}".format(e))
+        use_ibm = False
+
+def upload_version():
+    global bucket_name, root, use_ibm
+    upload_version = os.path.join(root, 'version.ini')
+    object_name = 'version.ini'
+    try:
+        cos.Object(bucket_name, object_name).upload_file(upload_version)
+    except ClientError as be:
+        print("IBM CLIENT ERROR: {0}\n".format(be))
+    except Exception as e:
+        print("Unable to upload {0}: {1}".format(object_name, e))
+
+def download_version():
+    global bucket_name, root, use_ibm
+    object_name = 'version.ini'
+    download_version = os.path.join(root, 'version.ini')
+    try:
+        files = cos.Bucket(bucket_name).objects.all()
+        for file in files:
+            if file.key == object_name:
+                file.download_file(download_version)
+                return True
+    except ClientError as be:
+        print("IBM CLIENT ERROR: {0}\n".format(be))
+    except Exception as e:
+        print("Unable to download {0}: {1}".format(object_name, e))
+
+def upload_configs():
+    global bucket_name, use_ibm, configs
+    local_upload_directory = configs
+    remote_dir = 'configs'
+    for root, dirs, files in os.walk(local_upload_directory):
+        for file in files:
+            local_file = os.path.join(root, file)
+            remote_file = os.path.join(remote_dir, file)
+            try:
+                cos.Object(bucket_name, remote_file).upload_file(local_file)
+            except ClientError as be:
+                print("IBM CLIENT ERROR: {0}\n".format(be))
+            except Exception as e:
+                print("Unable to upload {0}: {1}".format(remote_file, e))
+
+def download_configs():
+    global bucket_name, use_ibm, configs
+    remote_dir = 'configs'
+    local_download_directory = configs
+    for root, dirs, files in os.walk(local_download_directory):
+        for file in files:
+            local_file = os.path.join(root, file)
+            remote_file = os.path.join(remote_dir, file)
+            try:
+                files = cos.Bucket(bucket_name).objects.all()
+                for file in files:
+                    if file.key == remote_file:
+                        file.download_file(local_file)
+                        return True
+            except ClientError as be:
+                print("IBM CLIENT ERROR: {0}\n".format(be))
+            except Exception as e:
+                print("Unable to download {0}: {1}".format(remote_file, e))
+
+def delete_config(item):
+    global bucket_name, use_ibm
+    item = f"configs/{item}"
+    try:
+        cos.delete_object(Bucket=bucket_name, Key=item)
+        print(f"Configuration for {item} deleted!")
+    except ClientError as be:
+        print("IBM CLIENT ERROR: {0}\n".format(be))
+    except Exception as e:
+        print("Unable to delete object: {0}".format(e))
 
 # --------------------------------------------------
 # Languages available
@@ -405,18 +518,20 @@ async def check_update():
                 id = r.json()['id']
                 with open(os.path.join(root,'version.ini'), 'w') as versionfile:
                     versionfile.write(str(id))
+                    if use_ibm:
+                        upload_version()
                 print(f"-> A new version ({bot_version}) has been installed successfully!")
                 print(f"-> Changelog for version {bot_version}:\n{changelog}")
                 for guild in bot.guilds:
                     ctx = guild
                     embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'updatetitle')), description=eval("f" + get_guild_language(ctx, 'updatedesc')), color=0x286fad)
-                    try:
-                        await guild.get_channel(guild.system_channel.id).send(embed=embed)
-                    except AttributeError:
-                        for channel in guild.text_channels:
-                            if channel.permissions_for(guild.me).send_messages:
-                                await channel.send(embed=embed)
-                                break
+                    # try:
+                    #     await guild.get_channel(guild.system_channel.id).send(embed=embed)
+                    # except AttributeError:
+                    #     for channel in guild.text_channels:
+                    #         if channel.permissions_for(guild.me).send_messages:
+                    #             await channel.send(embed=embed)
+                    #             break
         elif r.status_code == 403:
             print("-> Unable to check for bot updates! We have been rate limited by GitHub, checking for updates later...")
     except Exception as e:
@@ -445,40 +560,62 @@ async def check_timer(bot):
 
 @bot.event
 async def on_ready():
-    global supported_languages_message, lang_list
-    print(f"{bot.user} is finishing up loading... (Step 1/6)")
+    global supported_languages_message, lang_list, use_ibm
+    n = 5
+    an = 1
+    print(f"{bot.user} is finishing up loading...")
     guilds = []
     for guild in bot.guilds:
         guilds.append(f"{guild.id}")
-    print(f"Checking for updates... (Step 2/6)")
+    if use_ibm:
+        print(f"Getting bucket infos from IBM...")
+        if not get_bucket():
+            if use_ibm:
+                create_bucket()
+            else:
+                print(f"-> IBM credentials are invalid, skipping sync...")
+    print(f"Checking for updates... (Step {str(an)}/{str(n)})")
+    if use_ibm:
+        download_version()
     if not os.path.exists(os.path.join(root,'version.ini')):
         with open(os.path.join(root,'version.ini'), 'w') as f:
             f.write("0")
+        if use_ibm:
+            upload_version()
     else:
         with open(os.path.join(root,'version.ini'), 'r') as f:
             if f.read() == "":
                 with open(os.path.join(root,'version.ini'), 'w') as f:
                     f.write("0")
+                if use_ibm:
+                    upload_version()
+    if use_ibm:
+        upload_version()
     check_update.start()
     langs = lang.tts_langs()
     for i in langs:
         supported_languages_message += f"{langs[i]} -> {i}\n"
         lang_list.append(i)
     await check_installed_languages()
-    print(f"Internal updates completed (Step 2/6)")
-    print(f"Cleaning cache... (Step 3/6)")
+    print(f"Internal updates completed (Step {str(an)}/{str(n)})")
+    an += 1
+    print(f"Cleaning cache... (Step {str(an)}/{str(n)})")
     if os.path.exists(temp):
             shutil.rmtree(temp)
-    print(f"Cache cleaned (Step 3/6)")
-    print(f"Creating directories... (Step 4/6)")
+    print(f"Cache cleaned (Step {str(an)}/{str(n)})")
+    an += 1
+    print(f"Creating directories... (Step {str(an)}/{str(n)})")
     os.makedirs(temp)
+    if use_ibm:
+        download_configs()
     for guild in guilds:
         new_fold = os.path.join(temp, guild)
         os.mkdir(new_fold)
     if not os.path.exists(configs):
         os.makedirs(configs)
-    print(f"Directories created (Step 4/6)")
-    print(f"Loading guild configs... (Step 5/6)")
+    print(f"Directories created (Step {str(an)}/{str(n)})")
+    an += 1
+    print(f"Loading guild configs... (Step {str(an)}/{str(n)})")
     for guild in bot.guilds:
         if not os.path.exists(os.path.join(configs, str(guild.id))):
             config = configparser.ConfigParser()
@@ -492,10 +629,13 @@ async def on_ready():
                 config['DEFAULT'] = {'role': 'TTS', 'lang': 'en'}
                 with open(os.path.join(configs, str(guild.id)), 'w') as configfile:
                     config.write(configfile)
-    print(f"Guild configs loaded (Step 5/6)")
-    print(f"Checking if all servers have the role specified in config... (Step 6/6)")
+    if use_ibm:
+        upload_configs()
+    print(f"Guild configs loaded (Step {str(an)}/{str(n)})")
+    an += 1
+    print(f"Checking if all servers have the role specified in config... (Step {str(an)}/{str(n)})")
     await loadroles(bot)
-    print(f"All servers have the specified role (Step 6/6)")
+    print(f"All servers have the specified role (Step {str(an)}/{str(n)})")
     await bot.change_presence(activity=discord.Game(name=f"/help | {len(bot.guilds)} servers"))
     bot.uptime = datetime.datetime.utcnow()
     print(f"{bot.user} has finished up loading!")
@@ -519,6 +659,8 @@ async def on_guild_join(guild):
     print(f"New guild joined: {guild.name} ({guild.id})")
     await bot.change_presence(activity=discord.Game(name=f"/help | {len(bot.guilds)} servers"))
     print(f"-> Role 'TTS' created in {guild.name}")
+    if use_ibm:
+        upload_configs()
 
 @bot.event
 async def on_guild_remove(guild):
@@ -526,12 +668,9 @@ async def on_guild_remove(guild):
     shutil.rmtree(os.path.join(temp, str(guild.id)))
     os.remove(os.path.join(configs, str(guild.id)))
     await bot.change_presence(activity=discord.Game(name=f"/help | {len(bot.guilds)} servers"))
+    if use_ibm:
+        delete_config(str(guild.id))
     print(f"{guild.name} ({guild.id}) removed")
-
-@bot.event
-async def on_guild_role_update(before, after):
-    if before.name != after.name:
-        await loadroles(bot)
 
 @bot.event
 async def on_voice_state_update(member, before, after):
@@ -571,5 +710,20 @@ else:
     except ValueError:
         print("Owner ID is invalid. You have to set the OWNERID environment variable to your own Discord id.")
         exit()
+
+if os.environ.get('COS_ENDPOINT') is None or os.environ.get('COS_API_KEY_ID') is None or os.environ.get('COS_INSTANCE_CRN') is None:
+    print("COS_ENDPOINT, COS_API_KEY_ID or COS_INSTANCE_CRN not found in environment variables")
+    print("You have to set them to use the IBM Cloud Object Storage.")
+    print("You can get them from https://cloud.ibm.com/docs/cloud-object-storage/getting-started.html")
+    print("Remember to also create a bucket with the name 'tts-bot-data'")
+    print("NOTE: If you use Heroku to host this bot, you need to set these variables because Heroku will REMOVE ALL DATA (including Server Configurations) on Dyno restart.")
+    use_ibm = False
+else:
+    use_ibm = True
+    COS_ENDPOINT = os.environ.get('COS_ENDPOINT')
+    COS_API_KEY_ID = os.environ.get('COS_API_KEY_ID')
+    COS_INSTANCE_CRN = os.environ.get('COS_INSTANCE_CRN')
+    bucket_name = "tts-bot-data"
+    cos = ibm_boto3.resource("s3", ibm_api_key_id=COS_API_KEY_ID, ibm_service_instance_id=COS_INSTANCE_CRN, config=Config(signature_version="oauth"), endpoint_url=COS_ENDPOINT)
 
 bot.run(TOKEN)
