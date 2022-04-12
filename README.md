@@ -11,6 +11,9 @@
 
 
 # **Table of Contents**
+
+<details><summary>Click to view the table of contents</summary>
+
 - [**Table of Contents**](#table-of-contents)
 - [**Overview**](#overview)
 - [**Features**](#features)
@@ -32,6 +35,9 @@
 - [**Contributing**](#contributing)
 - [**License**](#license)
 - [**TODO**](#todo)
+
+</details>
+<p></p>
 
 # **Overview**
 
@@ -56,6 +62,8 @@ TTS is a **Text-to-Speech** bot for Discord. It uses the **[gTTS](https://pypi.o
 (It may work on MacOS, but I haven't tested it)
 
 ## **Create a Discord bot**
+
+<details><summary>Click to view the instructions</summary>
 
 To create a Discord bot, you will need to create a Discord application. You can do this by going to the [Discord Developer Portal](https://discord.com/developers/applications) and creating a new application.
 
@@ -84,6 +92,9 @@ It will show you a token. Copy it and save it somewhere safe. **You will need th
 
 ![TOKEN](assets/009-Create-Bot.png)
 
+</details>
+<p></p>
+
 ## **Choose how you want to host the bot**
 
 You can choose to host the bot on your own server or on [Heroku](https://www.heroku.com) for free.
@@ -91,6 +102,8 @@ You can choose to host the bot on your own server or on [Heroku](https://www.her
 ### **Host on your own server**
 
 To host the bot on your own server, you will need to have admin/root access to the server to install packages.
+
+<details><summary>Click to view the instructions</summary>
 
 #### **Install dependencies**
 
@@ -140,9 +153,17 @@ You can start the bot with the following command:
 $ python3 bot.py
 ```
 
+</details>
+<p></p>
+
 ### **Host on [Heroku](https://www.heroku.com)**
+
+
+
 You will need to have an account on [Heroku](https://www.heroku.com) and on [IBM Cloud](https://cloud.ibm.com/registration) websites.
 You will need an IBM Cloud account to store all server configurations because Heroku automatically deletes them. 
+
+<details><summary>Click to view the instructions</summary>
 
 #### **Create an IBM Cloud account**
 
@@ -209,6 +230,9 @@ Choose an app name and a region.
 Then, clear all the Config Vars variables and put the ones you saved before.
 
 Finally, click "**Deploy App**"
+
+</details>
+<p></p>
 
 ## **Invite the bot to your Discord server**
 
