@@ -503,7 +503,7 @@ async def check_update():
                     print(f"-> Updating to {r.json()['tag_name']}...")
                     await bot.get_user(bot.owner_id).send(f"A new version ({r.json()['tag_name']}) is now available! Trying to update right now... (This will take a minute)")
                     subprocess.call("git pull --force", shell=True)
-                    subprocess.Popen("py bot.py", close_fds=False, shell=True)
+                    subprocess.Popen("python3 -u bot.py", close_fds=False, shell=True)
                     await bot.close()
                 else:
                     print(f"-> Bot is connected to a voice channel, skipping update...")
