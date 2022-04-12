@@ -35,7 +35,7 @@ bot = bridge.Bot(
     auto_sync_commands=True,
 )
 
-bot_version = "v3.0.0b.2"
+bot_version = "v3.0.0b.3"
 
 # --------------------------------------------------
 # Folders
