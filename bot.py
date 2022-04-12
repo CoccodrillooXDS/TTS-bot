@@ -679,16 +679,6 @@ if os.environ.get('TOKEN') is None:
 else:
     TOKEN = os.environ.get('TOKEN')
 
-if os.environ.get('OWNERID') is None:
-    print("Owner ID not found. You have to set the OWNERID environment variable to your own Discord id.")
-    exit()
-else:
-    try:
-        bot.owner_id = int(os.environ.get('OWNERID'))
-    except ValueError:
-        print("Owner ID is invalid. You have to set the OWNERID environment variable to your own Discord id.")
-        exit()
-
 if os.environ.get('COS_ENDPOINT') is None or os.environ.get('COS_API_KEY_ID') is None or os.environ.get('COS_INSTANCE_CRN') is None:
     print("COS_ENDPOINT, COS_API_KEY_ID or COS_INSTANCE_CRN not found in environment variables")
     print("You have to set them to use the IBM Cloud Object Storage.")

@@ -1,0 +1,23 @@
+{
+    "name": "Text-To-Speech bot for Discord",
+    "description": "A Discord bot that allows you to speak to your friends in a new way.",
+    "repository": "https://github.com/CoccodrillooXDS/TTS-bot",
+    "keywords": ["TTS", "Text-To-Speech", "TextToSpeech", "Docker", "Discord", "bot", "ds", "Python", "Heroku"],
+    "env": {
+        "TOKEN": {
+            "description": "The Discord bot token"
+        },
+        "COS_API_KEY_ID": {
+            "description": "API Key generated from IBM Cloud",
+            "value": "W00YixxxxxxxxxxMB-odB-2ySfTrFBIQQWanc--P3byk"
+        },
+        "COS_ENDPOINT": {
+            "description": "Public endpoint for your cloud Object Storage (You can get it from https://control.cloud-object-storage.cloud.ibm.com/v2/endpoints)",
+            "value": "https://s3.eu-de.cloud-object-storage.appdomain.cloud"
+        },
+        "COS_INSTANCE_CRN": {
+            "description": "Instance CRN for your cloud Object Storage",
+            "value": "crn:v1:bluemix:public:cloud-object-storage:global:a/3bf0d9003xxxxxxxxxx1c3e97696b71c:d6f04d83-6c4f-4a62-a165-696756d63903::"
+        }
+    }
+}
