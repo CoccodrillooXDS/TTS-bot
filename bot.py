@@ -7,7 +7,6 @@ import random
 import re
 import shutil
 import string
-import subprocess
 import sys
 import time
 import traceback
@@ -35,7 +34,7 @@ bot = bridge.Bot(
     auto_sync_commands=True,
 )
 
-bot_version = "v3.0.0b.3"
+bot_version = "v3.0.0b.4"
 
 # --------------------------------------------------
 # Folders
@@ -180,7 +179,7 @@ def create_bucket():
     try:
         cos.Bucket(bucket_name).create(
             CreateBucketConfiguration={
-                "LocationConstraint":'eu-de-flex'
+                "LocationConstraint": 'eu-de-flex'
             }
         )
         print(f"Bucket: {bucket_name} created!")
@@ -240,7 +239,7 @@ def upload_configs():
     for root, dirs, files in os.walk(local_upload_directory):
         for file in files:
             local_file = os.path.join(root, file)
-            remote_file = os.path.join(remote_dir, file)
+            remote_file = remote_dir + "\\" + file
             try:
                 cos.Object(bucket_name, remote_file).upload_file(local_file)
             except ClientError as be:
@@ -403,6 +402,7 @@ class setrole(Modal):
         config['DEFAULT']['role'] = self.children[0].value
         with open(os.path.join(configs, str(interaction.guild.id)), 'w') as configfile:
             config.write(configfile)
+        upload_configs()
         embed=discord.Embed(title=eval("f" + get_guild_language(interaction, 'done')), description=eval("f" + get_guild_language(interaction, 'rolechange')), color=0x1eff00)
         await interaction.response.send_message(embed=embed, delete_after=3, ephemeral=True)
 
@@ -464,6 +464,7 @@ async def _settings(ctx, context):
                 config.write(configfile)
             embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), description=eval("f" + get_guild_language(ctx, 'changedlang')), color=0x1eff00)
             await ctx.response.edit_message(embed=embed, view=None)
+            upload_configs()
             await _settings(context, context)
         buttonok.callback = ok
     buttonchangelanguage.callback = changelanguage
