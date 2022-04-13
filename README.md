@@ -247,7 +247,7 @@ You can contribute to the project by making a pull request or by creating an iss
 
 You can also contribute by translating the bot to your language. Make sure to follow the same format as the English version or the bot might not work as intended.
 
-To contribute, fork the repository and after you made your changes, create a pull request.
+To contribute, you can fork the repository and after you made your changes, you can create a pull request.
 
 **Note** Some languages may have problems with the bot.
 
