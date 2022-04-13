@@ -370,7 +370,7 @@ async def disconnect(ctx):
 
 @bot.bridge_command(name="commands", description="Get help with the bot")
 async def help(ctx):
-    allhelp = f"{eval(get_guild_language(ctx, 'helpsay'))}\n{eval(get_guild_language(ctx, 'helplangs'))}\n{eval(get_guild_language(ctx, 'helpsettings'))}\n{eval(get_guild_language(ctx, 'helpstop'))}\n{eval(get_guild_language(ctx, 'helpabout'))}\n{eval(get_guild_language(ctx, 'helphelp'))}"
+    allhelp = f"{eval(get_guild_language(ctx, 'helpprefix'))}\n{eval(get_guild_language(ctx, 'helpsay'))}\n{eval(get_guild_language(ctx, 'helplangs'))}\n{eval(get_guild_language(ctx, 'helpsettings'))}\n{eval(get_guild_language(ctx, 'helpstop'))}\n{eval(get_guild_language(ctx, 'helpabout'))}\n{eval(get_guild_language(ctx, 'helphelp'))}"
     embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'helptitle')), description=allhelp, color=0x1eff00)
     await ctx.respond(embed=embed)
 
