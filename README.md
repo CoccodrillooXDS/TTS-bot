@@ -49,7 +49,6 @@ TTS is a **Text-to-Speech** bot for Discord. It uses the **[gTTS](https://pypi.o
 * Read your text aloud!
 * Run on any platform!
 * Easily self-hostable on any server (even on [Heroku](https://www.heroku.com))!
-* Self-updating!
 * Easy to use!
 * It's free!
 

@@ -491,6 +491,15 @@ async def check_update():
         if r.status_code == 200:
             with open(os.path.join(root, 'version.ini'), 'r') as f:
                     version = f.read()
+            if int(version) > r.json()['id'] and bot_version != r.json()['tag_name']:
+                print(f"-> Bot version ({bot_version}) is newer than the latest version ({r.json()['tag_name']})")
+                return
+            if bot_version != r.json()['tag_name'] and int(version) == r.json()['id']:
+                print(f"-> Bot version ({bot_version}) is newer than the latest version ({r.json()['tag_name']})")
+                return
+            if r.json()['tag_name'] != bot_version:
+                print(f"-> New version {r.json()['tag_name']} available!")
+                await bot.get_user(bot.owner_id).send(f"A new version ({r.json()['tag_name']}) is now available!")
             if int(version) != r.json()['id']:
                 changelog = r.json()['body']
                 id = r.json()['id']
@@ -683,8 +692,7 @@ if os.environ.get('COS_ENDPOINT') is None or os.environ.get('COS_API_KEY_ID') is
     print("COS_ENDPOINT, COS_API_KEY_ID or COS_INSTANCE_CRN not found in environment variables")
     print("You have to set them to use the IBM Cloud Object Storage.")
     print("You can get them from https://cloud.ibm.com/docs/cloud-object-storage/getting-started.html")
-    print("Remember to also create a bucket with the name 'tts-bot-data'")
-    print("NOTE: If you use Heroku to host this bot, you need to set these variables because Heroku will REMOVE ALL DATA (including Server Configurations) on Dyno restart.")
+    print("NOTE: If you use Heroku to host this bot, you need to set these variables because Heroku will REMOVE ALL DATA (including Server Configurations) on bot restart.")
     use_ibm = False
 else:
     use_ibm = True
