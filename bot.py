@@ -508,7 +508,6 @@ async def check_update():
                     if use_ibm:
                         upload_version()
                 print(f"-> A new version ({bot_version}) has been installed successfully!")
-                print(f"-> Changelog for version {bot_version}:\n{changelog}")
                 for guild in bot.guilds:
                     ctx = guild
                     embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'updatetitle')), description=eval("f" + get_guild_language(ctx, 'updatedesc')), color=0x286fad)
