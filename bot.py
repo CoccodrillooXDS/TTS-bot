@@ -505,8 +505,8 @@ async def check_update():
                 id = r.json()['id']
                 with open(os.path.join(root,'version.ini'), 'w') as versionfile:
                     versionfile.write(str(id))
-                    if use_ibm:
-                        upload_version()
+                if use_ibm:
+                    upload_version()
                 print(f"-> A new version ({bot_version}) has been installed successfully!")
                 for guild in bot.guilds:
                     ctx = guild
@@ -566,15 +566,11 @@ async def on_ready():
     if not os.path.exists(os.path.join(root,'version.ini')):
         with open(os.path.join(root,'version.ini'), 'w') as f:
             f.write("0")
-        if use_ibm:
-            upload_version()
     else:
         with open(os.path.join(root,'version.ini'), 'r') as f:
             if f.read() == "":
                 with open(os.path.join(root,'version.ini'), 'w') as f:
                     f.write("0")
-                if use_ibm:
-                    upload_version()
     if use_ibm:
         upload_version()
     check_update.start()
