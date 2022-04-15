@@ -34,7 +34,7 @@ bot = bridge.Bot(
     auto_sync_commands=True,
 )
 
-bot_version = "v3.0.0"
+bot_version = "v3.0.1"
 
 # --------------------------------------------------
 # Folders
@@ -520,7 +520,6 @@ async def check_update():
                 return
             if r.json()['tag_name'] != bot_version:
                 print(f"-> New version {r.json()['tag_name']} available!")
-                await bot.get_user(bot.owner_id).send(f"A new version ({r.json()['tag_name']}) is now available!")
             if int(version) != r.json()['id']:
                 changelog = r.json()['body']
                 id = r.json()['id']
