@@ -368,7 +368,28 @@ async def disconnect(ctx):
 # Help command
 # --------------------------------------------------
 
-@bot.bridge_command(name="commands", description="Get help with the bot")
+class Help(commands.HelpCommand):
+    async def send_bot_help(self, mapping):
+        allhelp = f"{eval(get_guild_language(self.context, 'helpprefix'))}\n{eval(get_guild_language(self.context, 'helpsay'))}\n{eval(get_guild_language(self.context, 'helplangs'))}\n{eval(get_guild_language(self.context, 'helpsettings'))}\n{eval(get_guild_language(self.context, 'helpstop'))}\n{eval(get_guild_language(self.context, 'helpabout'))}\n{eval(get_guild_language(self.context, 'helphelp'))}"
+        embed=discord.Embed(title=eval("f" + get_guild_language(self.context, 'helptitle')), description=allhelp, color=0x1eff00)
+        await self.context.respond(embed=embed)
+       
+    async def send_command_help(self, command):
+        command = eval(get_guild_language(self.context, f'help{command}'))
+        embed=discord.Embed(title=eval("f" + get_guild_language(self.context, 'helptitle')), description=command, color=0x1eff00)
+        await self.context.respond(embed=embed)
+      
+    async def send_group_help(self, group):
+        allhelp = f"{eval(get_guild_language(self.context, 'helpprefix'))}\n{eval(get_guild_language(self.context, 'helpsay'))}\n{eval(get_guild_language(self.context, 'helplangs'))}\n{eval(get_guild_language(self.context, 'helpsettings'))}\n{eval(get_guild_language(self.context, 'helpstop'))}\n{eval(get_guild_language(self.context, 'helpabout'))}\n{eval(get_guild_language(self.context, 'helphelp'))}"
+        embed=discord.Embed(title=eval("f" + get_guild_language(self.context, 'helptitle')), description=allhelp, color=0x1eff00)
+        await self.context.respond(embed=embed)
+    
+    async def send_cog_help(self, cog):
+        allhelp = f"{eval(get_guild_language(self.context, 'helpprefix'))}\n{eval(get_guild_language(self.context, 'helpsay'))}\n{eval(get_guild_language(self.context, 'helplangs'))}\n{eval(get_guild_language(self.context, 'helpsettings'))}\n{eval(get_guild_language(self.context, 'helpstop'))}\n{eval(get_guild_language(self.context, 'helpabout'))}\n{eval(get_guild_language(self.context, 'helphelp'))}"
+        embed=discord.Embed(title=eval("f" + get_guild_language(self.context, 'helptitle')), description=allhelp, color=0x1eff00)
+        await self.context.respond(embed=embed)
+
+@bot.slash_command(name="help", description="Get help with the bot")
 async def help(ctx):
     allhelp = f"{eval(get_guild_language(ctx, 'helpprefix'))}\n{eval(get_guild_language(ctx, 'helpsay'))}\n{eval(get_guild_language(ctx, 'helplangs'))}\n{eval(get_guild_language(ctx, 'helpsettings'))}\n{eval(get_guild_language(ctx, 'helpstop'))}\n{eval(get_guild_language(ctx, 'helpabout'))}\n{eval(get_guild_language(ctx, 'helphelp'))}"
     embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'helptitle')), description=allhelp, color=0x1eff00)
@@ -696,5 +717,7 @@ else:
     COS_INSTANCE_CRN = os.environ.get('COS_INSTANCE_CRN')
     bucket_name = "tts-bot-data"
     cos = ibm_boto3.resource("s3", ibm_api_key_id=COS_API_KEY_ID, ibm_service_instance_id=COS_INSTANCE_CRN, config=Config(signature_version="oauth"), endpoint_url=COS_ENDPOINT)
+
+bot.help_command = Help()
 
 bot.run(TOKEN)
