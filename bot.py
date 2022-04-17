@@ -523,7 +523,7 @@ async def check_update():
                 return
             if r.json()['tag_name'] != bot_version:
                 print(f"-> New version {r.json()['tag_name']} available!")
-            if int(version) != r.json()['id']:
+            if int(version) != r.json()['id'] and bot_version == r.json()['tag_name']:
                 changelog = r.json()['body']
                 id = r.json()['id']
                 with open(os.path.join(root,'version.ini'), 'w') as versionfile:
