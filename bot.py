@@ -290,13 +290,16 @@ async def langs(ctx):
 
 @bot.command(name="say", description="Convert text to speech", default_permissions=False)
 @commands.check(check_role)
-async def _say(ctx, *args):
+async def _say(ctx, *, args=None):
     if await ensure_voice(ctx):
         await ctx.defer()
         author = ctx.author.id
-        lang = args[0]
+        lang = args[0:2]
         lang = lang.lower()
-        text = ' '.join(args[1:])
+        if not args:
+            return
+        # text = ' '.join(args[1:])
+        text = args[3:]
         texta = text.lower()
         if not lang in lang_list:
             lang = "en"
@@ -313,7 +316,7 @@ async def _say(ctx, *args):
         source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(source))
         ctx.guild.voice_client.play(source, after=lambda e: print(f'Player error: {e}') if e else None)
         embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), description=eval("f" + get_guild_language(ctx, 'saylangmess')), color=0x1eff00)
-        await ctx.respond(embed=embed)
+        await ctx.respond(embed=embed, delete_after=1)
         await resettimer(ctx)
 
 @bot.slash_command(name="say", description="Convert text to speech", default_permissions=False)
