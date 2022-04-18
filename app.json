@@ -3,6 +3,7 @@
     "description": "A Discord bot that allows you to speak to your friends in a new way.",
     "repository": "https://github.com/CoccodrillooXDS/TTS-bot",
     "keywords": ["TTS", "Text-To-Speech", "TextToSpeech", "Docker", "Discord", "bot", "ds", "Python", "Heroku"],
+    "stack": "container",
     "env": {
         "TOKEN": {
             "description": "Discord bot token"
