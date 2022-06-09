@@ -471,17 +471,15 @@ async def _settings(ctx, context):
         global installed_langs
         language = config["DEFAULT"]["lang"]
         embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'changelang')), description=eval("f" + get_guild_language(ctx, 'changelangdrop')), color=0x1eff00)
-        buttonok = Button(custom_id="ok", label=eval("f" + get_guild_language(ctx, 'apply')), style=discord.ButtonStyle.green)
         options = []
         for i in installed_langs:
             options.append(discord.SelectOption(label=i, value=i))
         select = Select(custom_id="selecta", max_values=1, placeholder=language, options=options)
         view = View()
         view.add_item(select)
-        view.add_item(buttonok)
         await ctx.message.delete()
         await ctx.response.send_message(embed=embed, view=view, ephemeral=True)
-        async def ok(ctx):
+        async def callback(ctx):
             try:
                 config.set('DEFAULT', 'lang', select.values[0])
             except IndexError:
@@ -490,9 +488,10 @@ async def _settings(ctx, context):
                 config.write(configfile)
             embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), description=eval("f" + get_guild_language(ctx, 'changedlang')), color=0x1eff00)
             await ctx.response.edit_message(embed=embed, view=None)
-            upload_configs()
+            if use_ibm:
+                upload_configs()
             await _settings(context, context)
-        buttonok.callback = ok
+        select.callback = callback
     buttonchangelanguage.callback = changelanguage
 
 # --------------------------------------------------
