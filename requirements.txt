@@ -1,5 +1,5 @@
-py-cord>=2.0.0b0
-py-cord[voice]>=2.0.0b0
+py-cord>=2.0.0-rc.1
+py-cord[voice]>=2.0.0-rc.1
 PyNaCl
 gtts
 waiting
