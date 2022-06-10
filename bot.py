@@ -1,6 +1,7 @@
 import asyncio
 import configparser
 import datetime
+import json
 import logging
 import os
 import random
@@ -9,6 +10,7 @@ import shutil
 import string
 import sys
 import time
+from tokenize import Name
 import traceback
 import discord
 import nest_asyncio
@@ -34,7 +36,7 @@ bot = bridge.Bot(
     auto_sync_commands=True,
 )
 
-bot_version = "v3.0.4"
+bot_version = "v3.1.0"
 
 # --------------------------------------------------
 # Folders
@@ -53,6 +55,8 @@ supported_languages_message = ""
 lang_list = []
 allroles = []
 installed_langs = []
+conf = {'role': 'TTS', 'lang': 'en', 'autosaychan': '[]', 'defvoice': 'en'}
+punctuation = ['!', '"', '#', '$', '%', '&', "'", '*', '+', '-', '.', ',', ':', ';', '=', '?', '[', ']', '^', '_', '|', '~']
 
 TOKEN = ""
 
@@ -347,6 +351,30 @@ async def say(ctx, lang: Option(str, "Choose a language", autocomplete=showlangs
         await ctx.respond(embed=embed, allowed_mentions=discord.AllowedMentions(replied_user=False))
         await resettimer(ctx)
 
+async def hidsay(ctx, lang, text):
+    if await ensure_voice(ctx):
+        await ctx.defer()
+        author = ctx.author.id
+        lang = lang.lower()
+        texta = text.lower()
+        if not lang in lang_list:
+            lang = "en"
+        if "gg" in texta and "it" in lang:
+            texta = re.sub(r"\bgg\b", "g g", texta)
+        texta = "".join(texta)
+        tts = gTTS(texta, lang=lang)
+        if os.name == 'nt':
+            source = f"{temp}\{ctx.guild.id}\{ran()}.mp3"
+        else:
+            source = f"{temp}/{ctx.guild.id}/{ran()}.mp3"
+        tts.save(source)
+        wait(lambda: noplay(ctx), timeout_seconds=300)
+        source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(source))
+        ctx.guild.voice_client.play(source, after=lambda e: print(f'Player error: {e}') if e else None)
+        embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), description=eval("f" + get_guild_language(ctx, 'saylangmess')), color=0x1eff00)
+        await ctx.respond(embed=embed, allowed_mentions=discord.AllowedMentions(replied_user=False), delete_after=1)
+        await resettimer(ctx)
+
 # --------------------------------------------------
 # Disconnect the bot from the voice channel
 # --------------------------------------------------
@@ -406,7 +434,8 @@ async def help(ctx):
 
 @bot.bridge_command(name="about", description="About the bot")
 async def about(ctx):
-    global bot_version
+    global bot_version, punctuation
+    punct = ' '.join(map(str, punctuation))
     embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'abouttitle')), description=eval("f" + get_guild_language(ctx, 'aboutdesc')), color=0x1eff00)
     await ctx.respond(embed=embed)
 
@@ -447,17 +476,213 @@ async def config(ctx):
     await _settings(ctx, context)
 
 async def _settings(ctx, context):
+    global lang_list
     config = configparser.ConfigParser()
     config.read(os.path.join(configs, str(ctx.guild.id)))
+    aj = json.loads(config["DEFAULT"]["autosaychan"])
+    asc = ""
+    for i in aj:
+        asc += f"<#{i}>, "
     embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'currsettingstitle')), description=eval("f" + get_guild_language(ctx, 'currsettings')), color=0x1eff00)
     buttonclose = Button(custom_id="close", label=eval("f" + get_guild_language(ctx, 'close')), style=discord.ButtonStyle.danger)
     buttonchangelanguage = Button(custom_id="cl", label=eval("f" + get_guild_language(ctx, 'changelang')), style=discord.ButtonStyle.secondary, emoji="🏴‍☠️")
     buttonchangerole = Button(custom_id="cr", label=eval("f" + get_guild_language(ctx, 'changerole')), style=discord.ButtonStyle.secondary, emoji="🏷️")
+    buttondefvoice = Button(custom_id="cdv", label=eval("f" + get_guild_language(ctx, 'changedefaultvoice')), style=discord.ButtonStyle.secondary, emoji="🗣️")
+    buttonautosaychan = Button(custom_id="casc", label=eval("f" + get_guild_language(ctx, 'changeautosaychannel')), style=discord.ButtonStyle.secondary, emoji="#️⃣")
     view = View()
     view.add_item(buttonchangerole)
     view.add_item(buttonchangelanguage)
+    view.add_item(buttondefvoice)
+    view.add_item(buttonautosaychan)
     view.add_item(buttonclose)
     await ctx.respond(embed=embed, view=view, delete_after=20)
+    async def defvoice(ctx):
+        config.read(os.path.join(configs, str(ctx.guild.id)))
+        dv = config['DEFAULT']['defvoice']
+        embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'changedefaultvoice')), description=eval("f" + get_guild_language(ctx, 'changedefaultvoicedesc')), color=0x1eff00)
+        options1 = []
+        options2 = []
+        options3 = []
+        options4 = []
+        for i in lang_list:
+            if len(options1) < 25:
+                options1.append(discord.SelectOption(label=i, value=i))
+            elif len(options1) == 25 and len(options2) < 25:
+                options2.append(discord.SelectOption(label=i, value=i))
+            elif len(options1) == 25 and len(options2) == 25 and len(options3) < 25:
+                options3.append(discord.SelectOption(label=i, value=i))
+            elif len(options1) == 25 and len(options2) == 25 and len(options3) == 25 and len(options4) < 25:
+                options4.append(discord.SelectOption(label=i, value=i))
+        view = View()
+        async def callback(ctx):
+            try:
+                if select.values:
+                    config.set('DEFAULT', 'defvoice', select.values[0])
+            except IndexError:
+                config.set('DEFAULT', 'defvoice', dv)
+            except NameError:
+                pass
+            try:
+                if select2.values:
+                    config.set('DEFAULT', 'defvoice', select2.values[0])
+            except IndexError:
+                config.set('DEFAULT', 'defvoice', dv)
+            except NameError:
+                pass
+            try:
+                if select3.values:
+                    config.set('DEFAULT', 'defvoice', select3.values[0])
+            except IndexError:
+                config.set('DEFAULT', 'defvoice', dv)
+            except NameError:
+                pass
+            try:
+                if select4.values:
+                    config.set('DEFAULT', 'defvoice', select4.values[0])
+            except IndexError:
+                config.set('DEFAULT', 'defvoice', dv)
+            except NameError:
+                pass
+            with open(os.path.join(configs, str(ctx.guild.id)), 'w') as configfile:
+                config.write(configfile)
+            if use_ibm:
+                upload_configs()
+            embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), color=0x1eff00)
+            await ctx.message.delete()
+            await ctx.response.send_message(embed=embed, delete_after=1)
+            await _settings(context, context)
+        if len(options1) > 0:
+            select = Select(custom_id="defvoice", max_values=1, options=options1)
+            view.add_item(select)
+            select.callback = callback
+        if len(options2) > 0:
+            select2 = Select(custom_id="defvoice2", max_values=1, options=options2)
+            view.add_item(select2)
+            select2.callback = callback
+        if len(options3) > 0:
+            select3 = Select(custom_id="defvoice3", max_values=1, options=options3)
+            view.add_item(select3)
+            select3.callback = callback
+        if len(options4) > 0:
+            select4 = Select(custom_id="defvoice4", max_values=1, options=options4)
+            view.add_item(select4)
+            select4.callback = callback
+        await ctx.message.delete()
+        await ctx.response.send_message(embed=embed, view=view)
+    buttondefvoice.callback = defvoice
+    async def autosaychan(ctx):
+        config.read(os.path.join(configs, str(ctx.guild.id)))
+        ascj = json.loads(config['DEFAULT']['autosaychan'])
+        embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'changeautosaychannel')), color=0x1eff00)
+        options = []
+        options2 = []
+        options3 = []
+        optsel = []
+        optsel2 = []
+        optsel3 = []
+        for i in ctx.guild.text_channels:
+            if len(options) < 25:
+                if int(i.id) in ascj:
+                    options.append(discord.SelectOption(label=i.name, value=str(i.id), default=True))
+                    optsel.append(i.id)
+                else:
+                    options.append(discord.SelectOption(label=i.name, value=str(i.id)))
+            elif len(options) == 25 and len(options2) < 25:
+                if int(i.id) in ascj:
+                    options2.append(discord.SelectOption(label=i.name, value=str(i.id), default=True))
+                    optsel2.append(i.id)
+                else:
+                    options2.append(discord.SelectOption(label=i.name, value=str(i.id)))
+            elif len(options) == 25 and len(options2) == 25 and len(options3) < 25:
+                if int(i.id) in ascj:
+                    options3.append(discord.SelectOption(label=i.name, value=str(i.id), default=True))
+                    optsel3.append(i.id)
+                else:
+                    options3.append(discord.SelectOption(label=i.name, value=str(i.id)))
+        lo1 = len(options)
+        lo2 = len(options2)
+        lo3 = len(options3)
+        async def onlysel(ctx):
+            try:
+                await ctx.response.send_message(" ", ephemeral=True, delete_after=0)
+            except:
+                pass
+        view = View()
+        if lo1 > 25:
+            lo1 = 25
+        if not lo1 == 0:
+            select = Select(custom_id="autosaychan", min_values=0, max_values=lo1, options=options)
+            view.add_item(select)
+            select.callback = onlysel
+        if lo2 > 25:
+            lo2 = 25
+        if not lo2 == 0:
+            select2 = Select(custom_id="autosaychan2", min_values=0, max_values=lo2, options=options2)
+            view.add_item(select2)
+            select2.callback = onlysel
+        if lo3 > 25:
+            lo3 = 25
+        if not lo3 == 0:
+            select3 = Select(custom_id="autosaychan3", min_values=0, max_values=lo3, options=options3)
+            view.add_item(select3)
+            select3.callback = onlysel
+        buttonapply = Button(custom_id="apply", label=eval("f" + get_guild_language(ctx, 'apply')), style=discord.ButtonStyle.primary, emoji="✅")
+        if optsel == [] and optsel2 == [] and optsel3 == []:
+            buttondisable = Button(custom_id="disable", disabled=True, label=eval("f" + get_guild_language(ctx, 'disable')), style=discord.ButtonStyle.danger)
+        else:
+            buttondisable = Button(custom_id="disable", label=eval("f" + get_guild_language(ctx, 'disable')), style=discord.ButtonStyle.danger)
+        view.add_item(buttonapply)
+        view.add_item(buttondisable)
+        await ctx.message.delete()
+        await ctx.response.send_message(embed=embed, view=view)
+        async def callback(ctx):
+            channels = []
+            try:
+                for channel in select.values:
+                    channels.append(int(channel))
+                if not select.values:
+                    channels.extend(optsel)
+            except NameError:
+                pass
+            try:
+                for channel in select2.values:
+                    channels.append(int(channel))
+                if not select2.values:
+                    channels.extend(optsel2)
+            except NameError:
+                pass
+            try:
+                for channel in select3.values:
+                    channels.append(int(channel))
+                if not select3.values:
+                    channels.extend(optsel3)
+            except NameError:
+                pass
+            config.set('DEFAULT', 'autosaychan', str(channels))
+            with open(os.path.join(configs, str(ctx.guild.id)), 'w') as configfile:
+                config.write(configfile)
+            if use_ibm:
+                upload_configs()
+            embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), color=0x1eff00)
+            await ctx.message.delete()
+            await ctx.response.send_message(embed=embed, delete_after=1)
+            await _settings(context, context)
+        buttonapply.callback = callback
+        async def disable(ctx):
+            channels = []
+            config.set('DEFAULT', 'autosaychan', str(channels))
+            with open(os.path.join(configs, str(ctx.guild.id)), 'w') as configfile:
+                config.write(configfile)
+            if use_ibm:
+                upload_configs()
+            embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'disabledautosay')), color=0xe32222)
+            await ctx.message.delete()
+            await ctx.response.send_message(embed=embed, delete_after=3)
+            await asyncio.sleep(2)
+            await _settings(context, context)
+        buttondisable.callback = disable
+        await view.wait()
+    buttonautosaychan.callback = autosaychan
     async def close(ctx):
         await ctx.message.delete()
     buttonclose.callback = close
@@ -570,7 +795,7 @@ async def check_timer(bot):
 
 @bot.event
 async def on_ready():
-    global supported_languages_message, lang_list, use_ibm
+    global supported_languages_message, lang_list, use_ibm, conf
     n = 5
     an = 1
     print(f"{bot.user} is finishing up loading...")
@@ -600,6 +825,10 @@ async def on_ready():
     check_update.start()
     langs = lang.tts_langs()
     for i in langs:
+        if "zh-CN" in i:
+            continue
+        if "zh-TW" in i:
+            continue
         supported_languages_message += f"{langs[i]} -> {i}\n"
         lang_list.append(i)
     await check_installed_languages()
@@ -625,14 +854,19 @@ async def on_ready():
     for guild in bot.guilds:
         if not os.path.exists(os.path.join(configs, str(guild.id))):
             config = configparser.ConfigParser()
-            config['DEFAULT'] = {'role': 'TTS', 'lang': 'en'}
+            config['DEFAULT'] = conf
             with open(os.path.join(configs, str(guild.id)), 'w') as configfile:
                 config.write(configfile)
         else:
             config = configparser.ConfigParser()
             config.read(os.path.join(configs, str(guild.id)))
             if not "DEFAULT" in config:
-                config['DEFAULT'] = {'role': 'TTS', 'lang': 'en'}
+                config['DEFAULT'] = conf
+                with open(os.path.join(configs, str(guild.id)), 'w') as configfile:
+                    config.write(configfile)
+            for key in conf:
+                if not key in config['DEFAULT']:
+                    config['DEFAULT'][key] = conf[key]
                 with open(os.path.join(configs, str(guild.id)), 'w') as configfile:
                     config.write(configfile)
     if use_ibm:
@@ -649,8 +883,31 @@ async def on_ready():
     delete_mp3.start()
 
 @bot.event
+async def on_message(message):
+    global configs, lang_list, punctuation
+    config = configparser.ConfigParser()
+    if message.author.id == bot.user.id:
+        return
+    config.read(os.path.join(configs, str(message.guild.id)))
+    ctx = await bot.get_context(message)
+    a = json.loads(config['DEFAULT']['autosaychan'])
+    if int(message.channel.id) in a:
+        if message.content.startswith('>'):
+            await bot.process_commands(message)
+            return
+        voice = config['DEFAULT']['defvoice']
+        if message.content.startswith(tuple(punctuation)):
+            voice = message.content[1:3]
+            message = message.content[3:]
+        else:
+            message = message.content
+        await hidsay(ctx, lang=voice, text=message)
+    else:
+        await bot.process_commands(message)
+
+@bot.event
 async def on_guild_join(guild):
-    global configs, temp
+    global configs, temp, conf
     embed=discord.Embed(title=f"{guild.name}", description=f"**Hi!**\nThank you for adding me to '_**{guild.name}**_'!\nI automatically created a role called '**TTS**' that allows the users to use this bot.\n\n**WARNING**: Without this role you **CAN'T** use the bot.\n\nYou can change the role name and the bot language with the **`/settings`** command", color=0x286fad)
     await guild.get_channel(guild.system_channel.id).send(embed=embed)
     new_fold = os.path.join(temp, str(guild.id))
@@ -659,7 +916,7 @@ async def on_guild_join(guild):
         await guild.create_role(name="TTS")
     if not os.path.exists(os.path.join(configs, str(guild.id))):
         config = configparser.ConfigParser()
-        config['DEFAULT'] = {'role': 'TTS', 'lang': 'en'}
+        config['DEFAULT'] = conf
         with open(os.path.join(configs, str(guild.id)), 'w') as configfile:
             config.write(configfile)
     print(f"New guild joined: {guild.name} ({guild.id})")
