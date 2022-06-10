@@ -909,7 +909,13 @@ async def on_message(message):
 async def on_guild_join(guild):
     global configs, temp, conf
     embed=discord.Embed(title=f"{guild.name}", description=f"**Hi!**\nThank you for adding me to '_**{guild.name}**_'!\nI automatically created a role called '**TTS**' that allows the users to use this bot.\n\n**WARNING**: Without this role you **CAN'T** use the bot.\n\nYou can change the role name and the bot language with the **`/settings`** command", color=0x286fad)
-    await guild.get_channel(guild.system_channel.id).send(embed=embed)
+    try:
+        await guild.get_channel(guild.system_channel.id).send(embed=embed)
+    except AttributeError:
+        for channel in guild.text_channels:
+            if channel.permissions_for(guild.me).send_messages:
+                await channel.send(embed=embed)
+                break
     new_fold = os.path.join(temp, str(guild.id))
     os.mkdir(new_fold)
     if not discord.utils.get(guild.roles, name="TTS"):
