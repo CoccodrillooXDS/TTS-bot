@@ -36,7 +36,7 @@ bot = bridge.Bot(
     auto_sync_commands=True,
 )
 
-bot_version = "v3.1.2"
+bot_version = "v3.1.3"
 
 # --------------------------------------------------
 # Folders
@@ -297,6 +297,7 @@ async def langs(ctx):
 async def _say(ctx, *, args=None):
     if await ensure_voice(ctx):
         await ctx.defer()
+        config = configparser.ConfigParser()
         author = ctx.author.id
         if not args:
             embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'errnoarg')), color=0xFF0000)
@@ -308,7 +309,8 @@ async def _say(ctx, *, args=None):
         text = args[3:]
         texta = text.lower()
         if not lang in lang_list:
-            lang = "en"
+            config.read(os.path.join(configs, str(ctx.guild.id)))
+            lang = config['DEFAULT']['defvoice']
         if "gg" in texta and "it" in lang:
             texta = re.sub(r"\bgg\b", "g g", texta)
         texta = "".join(texta)
@@ -330,11 +332,13 @@ async def _say(ctx, *, args=None):
 async def say(ctx, lang: Option(str, "Choose a language", autocomplete=showlangs), text: Option(str, "Enter text to convert to speech")):
     if await ensure_voice(ctx):
         await ctx.defer()
+        config = configparser.ConfigParser()
         author = ctx.author.id
         lang = lang.lower()
         texta = text.lower()
         if not lang in lang_list:
-            lang = "en"
+            config.read(os.path.join(configs, str(ctx.guild.id)))
+            lang = config['DEFAULT']['defvoice']
         if "gg" in texta and "it" in lang:
             texta = re.sub(r"\bgg\b", "g g", texta)
         texta = "".join(texta)
@@ -354,11 +358,13 @@ async def say(ctx, lang: Option(str, "Choose a language", autocomplete=showlangs
 async def hidsay(ctx, lang, text):
     if await ensure_voice(ctx):
         await ctx.defer()
+        config = configparser.ConfigParser()
         author = ctx.author.id
         lang = lang.lower()
         texta = text.lower()
         if not lang in lang_list:
-            lang = "en"
+            config.read(os.path.join(configs, str(ctx.guild.id)))
+            lang = config['DEFAULT']['defvoice']
         if "gg" in texta and "it" in lang:
             texta = re.sub(r"\bgg\b", "g g", texta)
         texta = "".join(texta)
