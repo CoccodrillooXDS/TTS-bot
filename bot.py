@@ -36,7 +36,7 @@ bot = bridge.Bot(
     auto_sync_commands=True,
 )
 
-bot_version = "v3.1.1"
+bot_version = "v3.1.2"
 
 # --------------------------------------------------
 # Folders
@@ -268,9 +268,9 @@ def download_configs():
 
 def delete_config(item):
     global bucket_name, use_ibm
-    item = f"configs/{item}"
+    item = f"configs\\{item}"
     try:
-        cos.delete_object(Bucket=bucket_name, Key=item)
+        cos.Object(bucket_name, item).delete()
         print(f"Configuration for {item} deleted!")
     except ClientError as be:
         print("IBM CLIENT ERROR: {0}\n".format(be))
