@@ -10,7 +10,6 @@ import shutil
 import string
 import sys
 import time
-from tokenize import Name
 import traceback
 import discord
 import nest_asyncio
@@ -36,7 +35,7 @@ bot = bridge.Bot(
     auto_sync_commands=True,
 )
 
-bot_version = "v3.1.3"
+bot_version = "v3.1.4"
 
 # --------------------------------------------------
 # Folders
@@ -454,17 +453,69 @@ class setrole(Modal):
         super().__init__(*args, **kwargs)
         self.add_item(InputText(custom_id="role", label=eval("f" + get_guild_language(ctx, 'changerolemodal')), placeholder="TTS", value=""))
     async def callback(self, interaction: discord.Interaction):
-        role = discord.utils.get(interaction.guild.roles, name=self.children[0].value)
         config = configparser.ConfigParser()
         config.read(os.path.join(configs, str(interaction.guild.id)))
-        if not role:
-            role = await interaction.guild.create_role(name=self.children[0].value)
-        await interaction.user.add_roles(role)
+        newrole = discord.utils.get(interaction.guild.roles, name=self.children[0].value)
+        oldroleconf = config['DEFAULT']['role']
+        oldrole = discord.utils.get(interaction.guild.roles, name=oldroleconf)
+        warnrem = f"{eval('f' + get_guild_language(interaction, 'rolechange'))}\n{eval('f' + get_guild_language(interaction, 'rolenotdeleted'))}"
+        warnedit = f"{eval('f' + get_guild_language(interaction, 'rolechange'))}\n{eval('f' + get_guild_language(interaction, 'rolenotedited'))}"
+        errorembed=discord.Embed(title=eval("f" + get_guild_language(interaction, 'errtitle')), description=eval("f" + get_guild_language(interaction, 'unexpectederror')), color=0xff0000)
+        warningremoveembed=discord.Embed(title=eval("f" + get_guild_language(interaction, 'done')), description=warnrem, color=0xf0e407)
+        warningeditembed=discord.Embed(title=eval("f" + get_guild_language(interaction, 'done')), description=warnedit, color=0xf0e407)
+        embed=discord.Embed(title=eval("f" + get_guild_language(interaction, 'done')), description=eval("f" + get_guild_language(interaction, 'rolechange')), color=0x1eff00)
+        if oldrole is None and newrole is None:
+            try:
+                await interaction.guild.create_role(name=self.children[0].value)
+                print(f"{interaction.guild.name}: Created role {self.children[0].value}")
+            except:
+                e = traceback.format_exc()
+                print(f"Error: Could not create role {self.children[0].value} in {interaction.guild.name}\n{e}")
+                await interaction.response.send_message(embed=errorembed, delete_after=10, ephemeral=True)
+                return
+        if oldrole is not None and newrole is None:
+            try:
+                await oldrole.edit(name=self.children[0].value)
+                print(f"{interaction.guild.name}: Old role {oldroleconf} renamed to {self.children[0].value}")
+                newrole = discord.utils.get(interaction.guild.roles, name=self.children[0].value)
+            except:
+                e = traceback.format_exc()
+                print(f"Error: Could not edit role name from {oldroleconf} to {self.children[0].value} in {interaction.guild.name}\n{e}")
+                embed = warningeditembed
+                try:
+                    await interaction.guild.create_role(name=self.children[0].value)
+                    print(f"{interaction.guild.name}: Warning: Created new role (unable to edit the old role) {self.children[0].value}")
+                    newrole = discord.utils.get(interaction.guild.roles, name=self.children[0].value)
+                except:
+                    e = traceback.format_exc()
+                    print(f"Error: Could not edit {oldroleconf} and could not create role {self.children[0].value} in {interaction.guild.name}\n{e}")
+                    await interaction.response.send_message(embed=errorembed, delete_after=10, ephemeral=True)
+                    return
+        if newrole:
+            if newrole.id not in interaction.user.roles:
+                try:
+                    await interaction.user.add_roles(newrole)
+                    print(f"{interaction.guild.name}: {interaction.user.name} has been given {newrole.name}")
+                except:
+                    e = traceback.format_exc()
+                    print(f"Error: Could not add the role {newrole.name} to {interaction.user.name}\n{e}")
+                    await interaction.response.send_message(embed=errorembed, delete_after=10, ephemeral=True)
+                    return
+        oldrole = discord.utils.get(interaction.guild.roles, name=oldroleconf)
+        await asyncio.sleep(0.5)
+        if oldrole is not None and newrole is not None:
+            try:
+                await oldrole.delete()
+                print(f"{interaction.guild.name}: Deleted role {oldrole.name}")
+            except:
+                e = traceback.format_exc()
+                print(f"Error: Could not delete old role from {interaction.guild.name}\n{e}")
+                embed = warningremoveembed
         config['DEFAULT']['role'] = self.children[0].value
         with open(os.path.join(configs, str(interaction.guild.id)), 'w') as configfile:
             config.write(configfile)
-        upload_configs()
-        embed=discord.Embed(title=eval("f" + get_guild_language(interaction, 'done')), description=eval("f" + get_guild_language(interaction, 'rolechange')), color=0x1eff00)
+        if use_ibm:
+            upload_configs()
         await interaction.response.send_message(embed=embed, delete_after=3, ephemeral=True)
 
 @bot.bridge_command(name="settings", description="Edit bot configuration", default_permissions=False)
@@ -696,6 +747,7 @@ async def _settings(ctx, context):
         await ctx.message.delete()
         modal = setrole(ctx, title=eval("f" + get_guild_language(ctx, 'changerole')))
         await ctx.response.send_modal(modal)
+        await modal.wait()
         await _settings(context, context)
     buttonchangerole.callback = changerole
     async def changelanguage(ctx):
@@ -988,7 +1040,18 @@ else:
     COS_API_KEY_ID = os.environ.get('COS_API_KEY_ID')
     COS_INSTANCE_CRN = os.environ.get('COS_INSTANCE_CRN')
     bucket_name = "tts-bot-data"
-    cos = ibm_boto3.resource("s3", ibm_api_key_id=COS_API_KEY_ID, ibm_service_instance_id=COS_INSTANCE_CRN, config=Config(signature_version="oauth"), endpoint_url=COS_ENDPOINT)
+    try:
+        cos = ibm_boto3.resource("s3", ibm_api_key_id=COS_API_KEY_ID, ibm_service_instance_id=COS_INSTANCE_CRN, config=Config(signature_version="oauth"), endpoint_url=COS_ENDPOINT)
+    except Exception as e:
+        print(e)
+        print("\nCould not connect to IBM Cloud Object Storage. Please check your credentials.")
+        print("NOTE: If you use Heroku to host this bot, you need to set these variables because Heroku will REMOVE ALL DATA (including Server Configurations) on bot restart.")
+        print("\nLoading the bot without IBM Cloud in 5 seconds...\n")
+        use_ibm = False
+        try:
+            time.sleep(5)
+        except KeyboardInterrupt:
+            exit()
 
 bot.help_command = Help()
 
