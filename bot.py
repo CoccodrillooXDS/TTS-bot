@@ -26,7 +26,8 @@ nest_asyncio.apply()
 if os.name == 'nt':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-intents = discord.Intents.all()
+intents = discord.Intents.default()
+intents.message_content = True
 
 bot = bridge.Bot(
     command_prefix=commands.when_mentioned_or('>'),
@@ -950,6 +951,8 @@ async def on_message(message):
     ctx = await bot.get_context(message)
     a = json.loads(config['DEFAULT']['autosaychan'])
     if int(message.channel.id) in a:
+        if message.author.bot:
+            return
         if message.content.startswith('>'):
             await bot.process_commands(message)
             return
