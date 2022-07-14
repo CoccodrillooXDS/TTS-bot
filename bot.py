@@ -77,23 +77,23 @@ def return_language_string(lang, string):
     if not os.path.exists(os.path.join(langfolder, lang)):
         print(f"-> Language '{lang}' not found, defaulting to 'en'")
         lang = "en"
-    config.read(os.path.join(langfolder, lang))
+    config.read(os.path.join(langfolder, lang), encoding='utf-8')
     try:
         config['DEFAULT']
         config['DEFAULT'][string].isspace()
     except KeyError:
         print(f"-> String '{string}' not found in language '{lang}', defaulting to 'en'")
         lang = "en"
-        config.read(os.path.join(langfolder, lang))
+        config.read(os.path.join(langfolder, lang), encoding='utf-8')
         return config['DEFAULT'][string]
     return config['DEFAULT'][string]
 
 def get_guild_language(ctx, string):
     config = configparser.ConfigParser()
     try:
-        config.read(os.path.join(configs, str(ctx.guild.id)))
+        config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
     except:
-        config.read(os.path.join(configs, str(ctx.id)))
+        config.read(os.path.join(configs, str(ctx.id)), encoding='utf-8')
     return return_language_string(config['DEFAULT']['lang'], string)
 
 def showlangs(ctx: discord.AutocompleteContext):
@@ -104,7 +104,7 @@ async def loadroles(bot):
     global allroles
     for guild in bot.guilds:
         config = configparser.ConfigParser()
-        config.read(os.path.join(configs, str(guild.id)))
+        config.read(os.path.join(configs, str(guild.id)), encoding='utf-8')
         if not discord.utils.get(guild.roles, name=config['DEFAULT']['role']):
             await guild.create_role(name=config['DEFAULT']['role'])
             print(f"-> Role '{config['DEFAULT']['role']}' created in {guild.name}")
@@ -116,20 +116,20 @@ async def loadroles(bot):
 async def resettimer(ctx):
     config = configparser.ConfigParser()
     if os.path.exists(os.path.join(temp, str(ctx.guild.id),'.clock')):
-        config.read(os.path.join(temp, str(ctx.guild.id)))
+        config.read(os.path.join(temp, str(ctx.guild.id)), encoding='utf-8')
     config['DEFAULT'] = {'time': time.time()}
     with open(os.path.join(temp, str(ctx.guild.id),'.clock'), 'w') as configfile:
         config.write(configfile)
 
 async def check_role(ctx):
     config = configparser.ConfigParser()
-    config.read(os.path.join(configs, str(ctx.guild.id)))
+    config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
     role = discord.utils.get(ctx.guild.roles, name=config['DEFAULT']['role'])
     if role in ctx.author.roles:
         return True
     else:
         config = configparser.ConfigParser()
-        config.read(os.path.join(configs, str(ctx.guild.id)))
+        config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
         embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'errrole')), color=0xFF0000)
         embed.set_thumbnail(url="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Antu_dialog-error.svg/1024px-Antu_dialog-error.svg.png")
         await ctx.respond(embed=embed, delete_after=5)
@@ -309,7 +309,7 @@ async def _say(ctx, *, args=None):
         text = args[3:]
         texta = text.lower()
         if not lang in lang_list:
-            config.read(os.path.join(configs, str(ctx.guild.id)))
+            config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
             lang = config['DEFAULT']['defvoice']
         if "gg" in texta and "it" in lang:
             texta = re.sub(r"\bgg\b", "g g", texta)
@@ -337,7 +337,7 @@ async def say(ctx, lang: Option(str, "Choose a language", autocomplete=showlangs
         lang = lang.lower()
         texta = text.lower()
         if not lang in lang_list:
-            config.read(os.path.join(configs, str(ctx.guild.id)))
+            config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
             lang = config['DEFAULT']['defvoice']
         if "gg" in texta and "it" in lang:
             texta = re.sub(r"\bgg\b", "g g", texta)
@@ -363,7 +363,7 @@ async def hidsay(ctx, lang, text):
         lang = lang.lower()
         texta = text.lower()
         if not lang in lang_list:
-            config.read(os.path.join(configs, str(ctx.guild.id)))
+            config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
             lang = config['DEFAULT']['defvoice']
         if "gg" in texta and "it" in lang:
             texta = re.sub(r"\bgg\b", "g g", texta)
@@ -455,7 +455,7 @@ class setrole(Modal):
         self.add_item(InputText(custom_id="role", label=eval("f" + get_guild_language(ctx, 'changerolemodal')), placeholder="TTS", value=""))
     async def callback(self, interaction: discord.Interaction):
         config = configparser.ConfigParser()
-        config.read(os.path.join(configs, str(interaction.guild.id)))
+        config.read(os.path.join(configs, str(interaction.guild.id)), encoding='utf-8')
         newrole = discord.utils.get(interaction.guild.roles, name=self.children[0].value)
         oldroleconf = config['DEFAULT']['role']
         oldrole = discord.utils.get(interaction.guild.roles, name=oldroleconf)
@@ -536,7 +536,7 @@ async def config(ctx):
 async def _settings(ctx, context):
     global lang_list
     config = configparser.ConfigParser()
-    config.read(os.path.join(configs, str(ctx.guild.id)))
+    config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
     aj = json.loads(config["DEFAULT"]["autosaychan"])
     asc = ""
     for i in aj:
@@ -555,7 +555,7 @@ async def _settings(ctx, context):
     view.add_item(buttonclose)
     await ctx.respond(embed=embed, view=view, delete_after=20)
     async def defvoice(ctx):
-        config.read(os.path.join(configs, str(ctx.guild.id)))
+        config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
         dv = config['DEFAULT']['defvoice']
         embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'changedefaultvoice')), description=eval("f" + get_guild_language(ctx, 'changedefaultvoicedesc')), color=0x1eff00)
         options1 = []
@@ -629,7 +629,7 @@ async def _settings(ctx, context):
         await ctx.response.send_message(embed=embed, view=view)
     buttondefvoice.callback = defvoice
     async def autosaychan(ctx):
-        config.read(os.path.join(configs, str(ctx.guild.id)))
+        config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
         ascj = json.loads(config['DEFAULT']['autosaychan'])
         embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'changeautosaychannel')), color=0x1eff00)
         options = []
@@ -837,7 +837,7 @@ async def check_timer(bot):
     for guild in bot.guilds:
         config = configparser.ConfigParser()
         if os.path.exists(os.path.join(temp, str(guild.id),'.clock')):
-            config.read(os.path.join(temp, str(guild.id),'.clock'))
+            config.read(os.path.join(temp, str(guild.id),'.clock'), encoding='utf-8')
             if time.time() - float(config['DEFAULT']['time']) >= 240:
                 try:
                     await guild.voice_client.disconnect()
@@ -918,7 +918,7 @@ async def on_ready():
                 config.write(configfile)
         else:
             config = configparser.ConfigParser()
-            config.read(os.path.join(configs, str(guild.id)))
+            config.read(os.path.join(configs, str(guild.id)), encoding='utf-8')
             if not "DEFAULT" in config:
                 config['DEFAULT'] = conf
                 with open(os.path.join(configs, str(guild.id)), 'w') as configfile:
@@ -947,7 +947,7 @@ async def on_message(message):
     config = configparser.ConfigParser()
     if message.author.id == bot.user.id:
         return
-    config.read(os.path.join(configs, str(message.guild.id)))
+    config.read(os.path.join(configs, str(message.guild.id)), encoding='utf-8')
     ctx = await bot.get_context(message)
     a = json.loads(config['DEFAULT']['autosaychan'])
     if int(message.channel.id) in a:
