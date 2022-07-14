@@ -43,11 +43,8 @@ You can also contribute by translating the bot to your language. Make sure to fo
 
 To contribute, you can fork the repository and after you made your changes, you can create a pull request.
 
-**Note** Some languages may have problems with the bot.
-
 # **License**
 This project is licensed under the [MIT license](LICENSE)
-
 
 # **TODO**
 
