@@ -36,7 +36,7 @@ bot = bridge.Bot(
     auto_sync_commands=True,
 )
 
-bot_version = "v3.1.6"
+bot_version = "v3.2.0"
 
 # --------------------------------------------------
 # Folders
@@ -55,7 +55,7 @@ supported_languages_message = ""
 lang_list = []
 allroles = []
 installed_langs = []
-conf = {'role': 'TTS', 'lang': 'en', 'autosaychan': '[]', 'defvoice': 'en'}
+conf = {'role': 'TTS', 'lang': 'en', 'autosaychan': '[]', 'defvoice': 'en', 'silenceupdates': 'False', 'updateschannel': 'system'}
 punctuation = ['!', '"', '#', '$', '%', '&', "'", '*', '+', '-', '.', ',', ':', ';', '=', '?', '[', ']', '^', '_', '|', '~']
 
 TOKEN = ""
@@ -368,6 +368,10 @@ async def hidsay(ctx, lang, text):
         if "gg" in texta and "it" in lang:
             texta = re.sub(r"\bgg\b", "g g", texta)
         texta = "".join(texta)
+        if texta == "":
+            embed = discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'errnoarg')), color=0xFF0000)
+            await ctx.respond(embed=embed, allowed_mentions=discord.AllowedMentions(replied_user=True), delete_after=1)
+            return
         tts = gTTS(texta, lang=lang)
         if os.name == 'nt':
             source = f"{temp}\{ctx.guild.id}\{ran()}.mp3"
@@ -540,18 +544,43 @@ async def _settings(ctx, context):
     aj = json.loads(config["DEFAULT"]["autosaychan"])
     asc = ""
     for i in aj:
-        asc += f"<#{i}>, "
+        if asc == "":
+            asc += f"<#{i}>"
+        else:
+            asc += f"__, __<#{i}>"
+    if config["DEFAULT"]["silenceupdates"] == "True":
+        sus = eval("f" + get_guild_language(ctx, 'enabled'))
+    else:
+        if config["DEFAULT"]["silenceupdates"] == "False":
+            sus = eval("f" + get_guild_language(ctx, 'disabled'))
+    usci = 0
+    if config["DEFAULT"]["updateschannel"] == "system" or config["DEFAULT"]["updateschannel"] == "":
+        try:
+            uc = f"<#{ctx.guild.system_channel.id}>"
+            usci = ctx.guild.system_channel.id
+        except AttributeError:
+            for channel in ctx.guild.text_channels:
+                if channel.permissions_for(ctx.guild.me).send_messages:
+                    uc = f"<#{channel.id}>"
+                    usci = channel.id
+                    break
+    else:
+        uc = f"<#{config['DEFAULT']['updateschannel']}>"
     embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'currsettingstitle')), description=eval("f" + get_guild_language(ctx, 'currsettings')), color=0x1eff00)
     buttonclose = Button(custom_id="close", label=eval("f" + get_guild_language(ctx, 'close')), style=discord.ButtonStyle.danger)
     buttonchangelanguage = Button(custom_id="cl", label=eval("f" + get_guild_language(ctx, 'changelang')), style=discord.ButtonStyle.secondary, emoji="🏴‍☠️")
     buttonchangerole = Button(custom_id="cr", label=eval("f" + get_guild_language(ctx, 'changerole')), style=discord.ButtonStyle.secondary, emoji="🏷️")
     buttondefvoice = Button(custom_id="cdv", label=eval("f" + get_guild_language(ctx, 'changedefaultvoice')), style=discord.ButtonStyle.secondary, emoji="🗣️")
     buttonautosaychan = Button(custom_id="casc", label=eval("f" + get_guild_language(ctx, 'changeautosaychannel')), style=discord.ButtonStyle.secondary, emoji="#️⃣")
+    buttonchangeupdatechannel = Button(custom_id="cuc", label=eval("f" + get_guild_language(ctx, 'changeupdatechannel')), style=discord.ButtonStyle.secondary, emoji="🗣️")
+    buttonsilenceupdates = Button(custom_id="su", label=eval("f" + get_guild_language(ctx, 'silenceupdates')), style=discord.ButtonStyle.secondary, emoji="🔇")
     view = View()
     view.add_item(buttonchangerole)
     view.add_item(buttonchangelanguage)
     view.add_item(buttondefvoice)
     view.add_item(buttonautosaychan)
+    view.add_item(buttonchangeupdatechannel)
+    view.add_item(buttonsilenceupdates)
     view.add_item(buttonclose)
     await ctx.respond(embed=embed, view=view, delete_after=20)
     async def defvoice(ctx):
@@ -777,6 +806,109 @@ async def _settings(ctx, context):
             await _settings(context, context)
         select.callback = callback
     buttonchangelanguage.callback = changelanguage
+    async def changeupdatechannel(ctx):
+        config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
+        chanid = config["DEFAULT"]["updateschannel"]
+        embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'changeupdatechannel')), color=0x1eff00)
+        options1 = []
+        options2 = []
+        options3 = []
+        options4 = []
+        for i in ctx.guild.text_channels:
+            if len(options1) < 25:
+                if str(i.id) == chanid or i.id == usci:
+                    options1.append(discord.SelectOption(label=i.name, value=str(i.id), default=True))
+                else:
+                    options1.append(discord.SelectOption(label=i.name, value=str(i.id)))
+            elif len(options1) == 25 and len(options2) < 25:
+                if str(i.id) == chanid or i.id == usci:
+                    options2.append(discord.SelectOption(label=i.name, value=str(i.id), default=True))
+                else:
+                    options2.append(discord.SelectOption(label=i.name, value=str(i.id)))
+            elif len(options1) == 25 and len(options2) == 25 and len(options3) < 25:
+                if str(i.id) == chanid or i.id == usci:
+                    options3.append(discord.SelectOption(label=i.name, value=str(i.id), default=True))
+                else:
+                    options3.append(discord.SelectOption(label=i.name, value=str(i.id)))
+            elif len(options1) == 25 and len(options2) == 25 and len(options3) == 25 and len(options4) < 25:
+                if str(i.id) == chanid or i.id == usci:
+                    options4.append(discord.SelectOption(label=i.name, value=str(i.id), default=True))
+                else:
+                    options4.append(discord.SelectOption(label=i.name, value=str(i.id)))
+        view = View()
+        async def callback(ctx):
+            try:
+                if select.values:
+                    config.set('DEFAULT', 'updateschannel', select.values[0])
+            except IndexError:
+                config.set('DEFAULT', 'updateschannel', chanid)
+            except NameError:
+                pass
+            try:
+                if select2.values:
+                    config.set('DEFAULT', 'updateschannel', select2.values[0])
+            except IndexError:
+                config.set('DEFAULT', 'updateschannel', chanid)
+            except NameError:
+                pass
+            try:
+                if select3.values:
+                    config.set('DEFAULT', 'updateschannel', select3.values[0])
+            except IndexError:
+                config.set('DEFAULT', 'updateschannel', chanid)
+            except NameError:
+                pass
+            try:
+                if select4.values:
+                    config.set('DEFAULT', 'updateschannel', select4.values[0])
+            except IndexError:
+                config.set('DEFAULT', 'updateschannel', chanid)
+            except NameError:
+                pass
+            with open(os.path.join(configs, str(ctx.guild.id)), 'w') as configfile:
+                config.write(configfile)
+            if use_ibm:
+                upload_configs()
+            embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), color=0x1eff00)
+            await ctx.message.delete()
+            await ctx.response.send_message(embed=embed, delete_after=1)
+            await _settings(context, context)
+        if len(options1) > 0:
+            select = Select(custom_id="updateschannel", max_values=1, options=options1)
+            view.add_item(select)
+            select.callback = callback
+        if len(options2) > 0:
+            select2 = Select(custom_id="updateschannel2", max_values=1, options=options2)
+            view.add_item(select2)
+            select2.callback = callback
+        if len(options3) > 0:
+            select3 = Select(custom_id="updateschannel3", max_values=1, options=options3)
+            view.add_item(select3)
+            select3.callback = callback
+        if len(options4) > 0:
+            select4 = Select(custom_id="updateschannel4", max_values=1, options=options4)
+            view.add_item(select4)
+            select4.callback = callback
+        await ctx.message.delete()
+        await ctx.response.send_message(embed=embed, view=view)
+    buttonchangeupdatechannel.callback = changeupdatechannel
+    async def silenceupdates(ctx):
+        config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
+        if config["DEFAULT"]["silenceupdates"] == "True":
+            config.set('DEFAULT', 'silenceupdates', "False")
+            embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), description=eval("f" + get_guild_language(ctx, 'unsilencedupdates')), color=0x1eff00)
+        else:
+            config.set('DEFAULT', 'silenceupdates', "True")
+            embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), description=eval("f" + get_guild_language(ctx, 'silencedupdates')), color=0x1eff00)
+        with open(os.path.join(configs, str(ctx.guild.id)), 'w') as configfile:
+            config.write(configfile)
+        if use_ibm:
+            upload_configs()
+        await ctx.message.delete()
+        await ctx.response.send_message(embed=embed, delete_after=1)
+        await _settings(context, context)
+    buttonsilenceupdates.callback = silenceupdates
+
 
 # --------------------------------------------------
 # Tasks
@@ -815,21 +947,42 @@ async def check_update():
                     versionfile.write(str(id))
                 if use_ibm:
                     upload_version()
-                print(f"-> A new version ({bot_version}) has been installed successfully!")
-                for guild in bot.guilds:
-                    ctx = guild
-                    embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'updatetitle')), description=eval("f" + get_guild_language(ctx, 'updatedesc')), color=0x286fad)
-                    try:
-                        await guild.get_channel(guild.system_channel.id).send(embed=embed)
-                    except AttributeError:
-                        for channel in guild.text_channels:
-                            if channel.permissions_for(guild.me).send_messages:
-                                await channel.send(embed=embed)
-                                break
+                silent = False
+                for attachment in r.json()['assets']:
+                    if attachment['name'] == "silent":
+                        silent = True
+                        break
+                if silent:
+                    print(f"-> A new silent version ({bot_version}) has been installed successfully!")
+                    return
+                else:
+                    print(f"-> A new version ({bot_version}) has been installed successfully!")
+                    for guild in bot.guilds:
+                        ctx = guild
+                        config = configparser.ConfigParser()
+                        config.read(os.path.join(configs, str(guild.id)), encoding='utf-8')
+                        if config['DEFAULT']['silenceupdates'] == "True":
+                            break
+                        embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'updatetitle')), description=eval("f" + get_guild_language(ctx, 'updatedesc')), color=0x286fad)
+                        try:
+                            if config['DEFAULT']['updateschannel'] == "system":
+                                await guild.get_channel(guild.system_channel.id).send(embed=embed)
+                            else:
+                                await guild.get_channel(int(config['DEFAULT']['updateschannel'])).send(embed=embed)
+                        except AttributeError:
+                            for channel in guild.text_channels:
+                                if channel.permissions_for(guild.me).send_messages:
+                                    await channel.send(embed=embed)
+                                    break
+                        except ValueError:
+                            for channel in guild.text_channels:
+                                if channel.permissions_for(guild.me).send_messages:
+                                    await channel.send(embed=embed)
+                                    break
         elif r.status_code == 403:
             print("-> Unable to check for bot updates! We have been rate limited by GitHub, checking for updates later...")
     except Exception as e:
-        print("-> Unable to check for bot updates!")
+        print("-> An error occurred while checking for bot updates!")
         print(logging.error(traceback.format_exc()))
 
 @tasks.loop(seconds=300)
