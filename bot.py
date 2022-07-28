@@ -36,7 +36,7 @@ bot = bridge.Bot(
     auto_sync_commands=True,
 )
 
-bot_version = "v3.2.1"
+bot_version = "v3.2.2"
 
 # --------------------------------------------------
 # Folders
@@ -173,7 +173,7 @@ def noplay(ctx):
         else:
             return True
     except AttributeError:
-        raise Exception("No voice client")
+        pass
 
 # --------------------------------------------------
 # IBM Cloud Internal functions
