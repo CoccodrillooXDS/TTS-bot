@@ -19,7 +19,7 @@ from ibm_botocore.client import Config, ClientError
 from discord.commands import Option
 from discord.ext import commands, tasks, bridge
 from discord.ui import Button, InputText, Modal, Select, View
-from gtts import gTTS, lang
+from gtts import gTTS, lang, gTTSError
 from waiting import wait
 
 nest_asyncio.apply()
@@ -36,7 +36,7 @@ bot = bridge.Bot(
     auto_sync_commands=True,
 )
 
-bot_version = "v3.2.0"
+bot_version = "v3.2.1"
 
 # --------------------------------------------------
 # Folders
@@ -65,6 +65,9 @@ use_ibm = False
 # --------------------------------------------------
 # Internal functions
 # --------------------------------------------------
+
+def generate_random_code():
+    return ''.join(random.choice(string.ascii_letters + string.digits) for i in range(1,9))
 
 async def check_installed_languages():
     global installed_langs
@@ -115,8 +118,6 @@ async def loadroles(bot):
 
 async def resettimer(ctx):
     config = configparser.ConfigParser()
-    if os.path.exists(os.path.join(temp, str(ctx.guild.id),'.clock')):
-        config.read(os.path.join(temp, str(ctx.guild.id)), encoding='utf-8')
     config['DEFAULT'] = {'time': time.time()}
     with open(os.path.join(temp, str(ctx.guild.id),'.clock'), 'w') as configfile:
         config.write(configfile)
@@ -166,12 +167,13 @@ def ran():
         return a
 
 def noplay(ctx):
-    if ctx.voice_client is None:
-        return False
-    if ctx.guild.voice_client.is_playing():
-        return False
-    else:
-        return True
+    try:
+        if ctx.guild.voice_client.is_playing():
+            return False
+        else:
+            return True
+    except AttributeError:
+        raise Exception("No voice client")
 
 # --------------------------------------------------
 # IBM Cloud Internal functions
@@ -368,16 +370,24 @@ async def hidsay(ctx, lang, text):
         if "gg" in texta and "it" in lang:
             texta = re.sub(r"\bgg\b", "g g", texta)
         texta = "".join(texta)
-        if texta == "":
+        if texta == "" or texta.isspace():
             embed = discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'errnoarg')), color=0xFF0000)
-            await ctx.respond(embed=embed, allowed_mentions=discord.AllowedMentions(replied_user=True), delete_after=1)
+            await ctx.respond(embed=embed, delete_after=5)
             return
         tts = gTTS(texta, lang=lang)
         if os.name == 'nt':
             source = f"{temp}\{ctx.guild.id}\{ran()}.mp3"
         else:
             source = f"{temp}/{ctx.guild.id}/{ran()}.mp3"
-        tts.save(source)
+        try:
+            tts.save(source)
+        except gTTSError:
+            code = generate_random_code()
+            e = traceback.format_exc()
+            print(e + "Error Code: " + code)
+            embed = discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'unexpectederror')), color=0xFF0000)
+            await ctx.respond(embed=embed, delete_after=5)
+            return
         wait(lambda: noplay(ctx), timeout_seconds=300)
         source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(source))
         ctx.guild.voice_client.play(source, after=lambda e: print(f'Player error: {e}') if e else None)
@@ -391,21 +401,24 @@ async def hidsay(ctx, lang, text):
 
 @bot.bridge_command(name="stop", description="Disconnect the bot from current channel", default_permissions=False)
 @commands.check(check_role)
-async def stop(ctx):
-    if ctx.voice_client:
-        await ctx.voice_client.disconnect()
-        embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), description=eval("f" + get_guild_language(ctx, 'disconnected')), color=0x1eff00)
-        await ctx.respond(embed=embed, delete_after=3)
-        if ctx.voice_client.is_playing():
-            ctx.voice_client.stop()
-    else:
-        embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'errnovc')), color=0xFF0000)
-        await ctx.respond(embed=embed, delete_after=3)
+async def _stop(ctx):
+    await stop(ctx)
 
 @bot.bridge_command(name="disconnect", description="Disconnect the bot from current channel", default_permissions=False)
 @commands.check(check_role)
 async def disconnect(ctx):
     await stop(ctx)
+    
+async def stop(ctx):
+    if ctx.voice_client:
+        if ctx.voice_client.is_playing():
+            ctx.voice_client.stop()
+        await ctx.voice_client.disconnect()
+        embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), description=eval("f" + get_guild_language(ctx, 'disconnected')), color=0x1eff00)
+        await ctx.respond(embed=embed, delete_after=3)
+    else:
+        embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'errnovc')), color=0xFF0000)
+        await ctx.respond(embed=embed, delete_after=3)
 
 # --------------------------------------------------
 # Help command
@@ -465,7 +478,8 @@ class setrole(Modal):
         oldrole = discord.utils.get(interaction.guild.roles, name=oldroleconf)
         warnrem = f"{eval('f' + get_guild_language(interaction, 'rolechange'))}\n{eval('f' + get_guild_language(interaction, 'rolenotdeleted'))}"
         warnedit = f"{eval('f' + get_guild_language(interaction, 'rolechange'))}\n{eval('f' + get_guild_language(interaction, 'rolenotedited'))}"
-        errorembed=discord.Embed(title=eval("f" + get_guild_language(interaction, 'errtitle')), description=eval("f" + get_guild_language(interaction, 'unexpectederror')), color=0xff0000)
+        code = generate_random_code()
+        errorembed=discord.Embed(title=eval("f" + get_guild_language(interaction, 'errtitle')), description=eval("f" + get_guild_language(interaction, 'unexpectederrorrole')), color=0xff0000)
         warningremoveembed=discord.Embed(title=eval("f" + get_guild_language(interaction, 'done')), description=warnrem, color=0xf0e407)
         warningeditembed=discord.Embed(title=eval("f" + get_guild_language(interaction, 'done')), description=warnedit, color=0xf0e407)
         embed=discord.Embed(title=eval("f" + get_guild_language(interaction, 'done')), description=eval("f" + get_guild_language(interaction, 'rolechange')), color=0x1eff00)
@@ -475,7 +489,8 @@ class setrole(Modal):
                 print(f"{interaction.guild.name}: Created role {self.children[0].value}")
             except:
                 e = traceback.format_exc()
-                print(f"Error: Could not create role {self.children[0].value} in {interaction.guild.name}\n{e}")
+                print(f"Error: Could not create role {self.children[0].value} in {interaction.guild.name}")
+                print(e + "Error Code: " + code)
                 await interaction.response.send_message(embed=errorembed, delete_after=10, ephemeral=True)
                 return
         if oldrole is not None and newrole is None:
@@ -485,7 +500,7 @@ class setrole(Modal):
                 newrole = discord.utils.get(interaction.guild.roles, name=self.children[0].value)
             except:
                 e = traceback.format_exc()
-                print(f"Error: Could not edit role name from {oldroleconf} to {self.children[0].value} in {interaction.guild.name}\n{e}")
+                print(f"Error: Could not edit role name from {oldroleconf} to {self.children[0].value} in {interaction.guild.name}\{e}")
                 embed = warningeditembed
                 try:
                     await interaction.guild.create_role(name=self.children[0].value)
@@ -493,7 +508,8 @@ class setrole(Modal):
                     newrole = discord.utils.get(interaction.guild.roles, name=self.children[0].value)
                 except:
                     e = traceback.format_exc()
-                    print(f"Error: Could not edit {oldroleconf} and could not create role {self.children[0].value} in {interaction.guild.name}\n{e}")
+                    print(f"Error: Could not edit {oldroleconf} and could not create role {self.children[0].value} in {interaction.guild.name}")
+                    print(e + "Error Code: " + code)
                     await interaction.response.send_message(embed=errorembed, delete_after=10, ephemeral=True)
                     return
         if newrole:
@@ -503,7 +519,8 @@ class setrole(Modal):
                     print(f"{interaction.guild.name}: {interaction.user.name} has been given {newrole.name}")
                 except:
                     e = traceback.format_exc()
-                    print(f"Error: Could not add the role {newrole.name} to {interaction.user.name}\n{e}")
+                    print(f"Error: Could not add the role {newrole.name} to {interaction.user.name}")
+                    print(e + "Error Code: " + code)
                     await interaction.response.send_message(embed=errorembed, delete_after=10, ephemeral=True)
                     return
         oldrole = discord.utils.get(interaction.guild.roles, name=oldroleconf)
@@ -924,7 +941,6 @@ async def delete_mp3():
                 except PermissionError:
                     pass
 
-
 @tasks.loop(seconds=1800)
 async def check_update():
     try:
@@ -1021,6 +1037,7 @@ async def on_ready():
                 create_bucket()
             else:
                 print(f"-> IBM credentials are invalid, skipping sync...")
+                use_ibm = False
     print(f"Checking for updates... (Step {str(an)}/{str(n)})")
     if use_ibm:
         download_version()
@@ -1122,7 +1139,15 @@ async def on_message(message):
 @bot.event
 async def on_guild_join(guild):
     global configs, temp, conf
-    embed=discord.Embed(title=f"{guild.name}", description=f"**Hi!**\nThank you for adding me to '_**{guild.name}**_'!\nI automatically created a role called '**TTS**' that allows the users to use this bot.\n\n**WARNING**: Without this role you **CAN'T** use the bot.\n\nYou can change the role name and the bot language with the **`/settings`** command", color=0x286fad)
+    embed=discord.Embed(title=f"{guild.name}", description=f"**Hi!**\nThank you for adding me to '_**{guild.name}**_'!\nI automatically created a role called '**TTS**' that allows the users to use this bot.\n\n**WARNING**: Without this role you **CAN'T** use the bot.\n\nYou can change bot settings with the **`/settings`** command", color=0x286fad)
+    if not discord.utils.get(guild.roles, name="TTS"):
+        try:
+            await guild.create_role(name="TTS")
+            print(f"-> Role 'TTS' created in {guild.name}")
+        except:
+            e = traceback.format_exc()
+            print(f"-> Error creating role 'TTS' in {guild.name}:\n{e}")
+            embed=discord.Embed(title=f"{guild.name}", description=f"**Hi!**\nThank you for adding me to '_**{guild.name}**_'!\n\n**AN ERROR OCCURRED**:\nI can't create a role called '**TTS**' (it allows the users to use this bot).\n\n**WARNING**: Without this role you **CAN'T** use the bot.\n\nAfter creating manually a role called '**TTS**' you can change bot settings with the **`/settings`** command", color=0x286fad)
     try:
         await guild.get_channel(guild.system_channel.id).send(embed=embed)
     except AttributeError:
@@ -1132,8 +1157,6 @@ async def on_guild_join(guild):
                 break
     new_fold = os.path.join(temp, str(guild.id))
     os.mkdir(new_fold)
-    if not discord.utils.get(guild.roles, name="TTS"):
-        await guild.create_role(name="TTS")
     if not os.path.exists(os.path.join(configs, str(guild.id))):
         config = configparser.ConfigParser()
         config['DEFAULT'] = conf
@@ -1141,7 +1164,6 @@ async def on_guild_join(guild):
             config.write(configfile)
     print(f"New guild joined: {guild.name} ({guild.id})")
     await bot.change_presence(activity=discord.Game(name=f"/help | {len(bot.guilds)} servers"))
-    print(f"-> Role 'TTS' created in {guild.name}")
     if use_ibm:
         upload_configs()
 
