@@ -36,7 +36,7 @@ bot = bridge.Bot(
     auto_sync_commands=True,
 )
 
-bot_version = "v3.2.2"
+bot_version = "v3.2.3"
 
 # --------------------------------------------------
 # Folders
@@ -321,7 +321,15 @@ async def _say(ctx, *, args=None):
             source = f"{temp}\{ctx.guild.id}\{ran()}.mp3"
         else:
             source = f"{temp}/{ctx.guild.id}/{ran()}.mp3"
-        tts.save(source)
+        try:
+            tts.save(source)
+        except gTTSError:
+            code = generate_random_code()
+            e = traceback.format_exc()
+            print(e + "Error Code: " + code)
+            embed = discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'unexpectederror')), color=0xFF0000)
+            await ctx.respond(embed=embed, delete_after=5)
+            return
         wait(lambda: noplay(ctx), timeout_seconds=300)
         source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(source))
         ctx.guild.voice_client.play(source, after=lambda e: print(f'Player error: {e}') if e else None)
@@ -349,7 +357,15 @@ async def say(ctx, lang: Option(str, "Choose a language", autocomplete=showlangs
             source = f"{temp}\{ctx.guild.id}\{ran()}.mp3"
         else:
             source = f"{temp}/{ctx.guild.id}/{ran()}.mp3"
-        tts.save(source)
+        try:
+            tts.save(source)
+        except gTTSError:
+            code = generate_random_code()
+            e = traceback.format_exc()
+            print(e + "Error Code: " + code)
+            embed = discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'unexpectederror')), color=0xFF0000)
+            await ctx.respond(embed=embed, delete_after=5)
+            return
         wait(lambda: noplay(ctx), timeout_seconds=300)
         source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(source))
         ctx.guild.voice_client.play(source, after=lambda e: print(f'Player error: {e}') if e else None)
