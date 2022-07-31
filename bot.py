@@ -1069,7 +1069,10 @@ async def on_ready():
                     f.write("0")
     if use_ibm:
         upload_version()
-    check_update.start()
+    try:
+        check_update.start()
+    except:
+        pass
     langs = lang.tts_langs()
     for i in langs:
         if "zh-CN" in i:
@@ -1126,8 +1129,11 @@ async def on_ready():
     await bot.change_presence(activity=discord.Game(name=f"/help | {len(bot.guilds)} servers"))
     bot.uptime = datetime.datetime.utcnow()
     print(f"{bot.user} has finished up loading!")
-    check_timer.start(bot)
-    delete_mp3.start()
+    try:
+        check_timer.start(bot)
+        delete_mp3.start()
+    except:
+        pass
 
 @bot.event
 async def on_message(message):
