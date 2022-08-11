@@ -37,7 +37,7 @@ bot = bridge.Bot(
     activity=discord.Game(name="Loading..."),
 )
 
-bot_version = "v3.3.0"
+bot_version = "v3.3.1"
 
 # --------------------------------------------------
 # Folders
@@ -159,24 +159,39 @@ async def preplay(ctx, source):
     voice = ctx.guild.voice_client
     if voice:
         if voice.is_playing():
-            if voice.channel == ctx.author.voice.channel:
-                addqueue(source, ctx.guild)
-                excludelist(source, 'add')
+            if ctx.author.voice:
+                if voice.channel == ctx.author.voice.channel:
+                    addqueue(source, ctx.guild)
+                    excludelist(source, 'add')
+                else:
+                    embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'errvoice')), color=0xFF0000)
+                    await ctx.respond(embed=embed, delete_after=5)
+                    return False
             else:
-                embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'errvoice')), color=0xFF0000)
+                embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'erruvc')), color=0xFF0000)
                 await ctx.respond(embed=embed, delete_after=5)
                 return False
         else:
-            if not voice.channel == ctx.author.voice.channel:
-                await voice.move_to(ctx.author.voice.channel)
+            if ctx.author.voice:
+                if not voice.channel == ctx.author.voice.channel:
+                    await voice.move_to(ctx.author.voice.channel)
+                addqueue(source, ctx.guild)
+                excludelist(source, 'add')
+                nextqueue(ctx.guild, ctx.author.voice.channel.id)
+            else:
+                embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'erruvc')), color=0xFF0000)
+                await ctx.respond(embed=embed, delete_after=5)
+                return False
+    else:
+        if ctx.author.voice:
+            voice = await ctx.author.voice.channel.connect()
             addqueue(source, ctx.guild)
             excludelist(source, 'add')
             nextqueue(ctx.guild, ctx.author.voice.channel.id)
-    else:
-        voice = await ctx.author.voice.channel.connect()
-        addqueue(source, ctx.guild)
-        excludelist(source, 'add')
-        nextqueue(ctx.guild, ctx.author.voice.channel.id)
+        else:
+            embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'erruvc')), color=0xFF0000)
+            await ctx.respond(embed=embed, delete_after=5)
+            return False
     return True
 
 def play(source, guild, channelid):
