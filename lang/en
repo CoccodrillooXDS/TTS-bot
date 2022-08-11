@@ -4,6 +4,7 @@ errrole = "You can't use this command.\nYou don't have the '{config['DEFAULT']['
 errnovc = "I'm not connected to any voice channel!"
 erruvc = "You are not connected to a voice channel!\nConnect to a VC and try again."
 errnoarg = "You didn't provide the required argument(s) to run this command!"
+errvoice = "I'm currently talking in another voice channel! Try again later."
 unexpectederrorrole = "An unexpected error has occurred!\nMake sure you have given me the Administrator or Manage Roles permission and that the bot role is the top role and try again.\nIf the error persists, contact the bot developer and send the following code: {code}."
 unexpectederror = "An unexpected error has occurred! If the error persists, contact the bot developer and send the following code: {code}."
 rolenotdeleted = "The role '{oldrole}' has not been deleted! An error occurred during the role removal process."

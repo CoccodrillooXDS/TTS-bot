@@ -15,12 +15,12 @@ import discord
 import nest_asyncio
 import requests
 import ibm_boto3
+import pickle
 from ibm_botocore.client import Config, ClientError
 from discord.commands import Option
 from discord.ext import commands, tasks, bridge
 from discord.ui import Button, InputText, Modal, Select, View
 from gtts import gTTS, lang, gTTSError
-from waiting import wait
 
 nest_asyncio.apply()
 if os.name == 'nt':
@@ -35,10 +35,9 @@ bot = bridge.Bot(
     intents=intents,
     auto_sync_commands=True,
     activity=discord.Game(name="Loading..."),
-    heartbeat_timeout=350.0,
 )
 
-bot_version = "v3.2.4"
+bot_version = "v3.3.0"
 
 # --------------------------------------------------
 # Folders
@@ -57,6 +56,7 @@ supported_languages_message = ""
 lang_list = []
 allroles = []
 installed_langs = []
+exclude_list = []
 conf = {'role': 'TTS', 'lang': 'en', 'autosaychan': '[]', 'defvoice': 'en', 'silenceupdates': 'False', 'updateschannel': 'system'}
 punctuation = ['!', '"', '#', '$', '%', '&', "'", '*', '+', '-', '.', ',', ':', ';', '=', '?', '[', ']', '^', '_', '|', '~']
 
@@ -118,10 +118,10 @@ async def loadroles(bot):
         allroles.append(config['DEFAULT']['role'])
     allroles = list(dict.fromkeys(allroles))
 
-async def resettimer(ctx):
+def resettimer(guild):
     config = configparser.ConfigParser()
     config['DEFAULT'] = {'time': time.time()}
-    with open(os.path.join(temp, str(ctx.guild.id),'.clock'), 'w') as configfile:
+    with open(os.path.join(temp, str(guild.id),'.clock'), 'w') as configfile:
         config.write(configfile)
 
 async def check_role(ctx):
@@ -150,32 +150,100 @@ def get_bot_uptime():
         fmt = '{h} hours, {m} minutes, and {s} seconds'
     return fmt.format(d=days, h=hours, m=minutes, s=seconds)
 
-async def ensure_voice(ctx):
-    embed=discord.Embed(title=eval(get_guild_language(ctx, 'errtitle')), description=eval(get_guild_language(ctx, 'erruvc')), color=0xff0000)
-    embed.set_thumbnail(url="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Antu_dialog-error.svg/1024px-Antu_dialog-error.svg.png")
-    if ctx.voice_client is None:
-        if ctx.author.voice:
-            await ctx.author.voice.channel.connect()
-            return True
-        else:
-            await ctx.respond(embed=embed, delete_after=5)
-            return False
-    else:
-        return True
-
 def ran():
         a = ""
         a = ''.join(random.choice(string.ascii_letters + string.digits) for i in range(20))
         return a
 
-def noplay(ctx):
-    try:
-        if ctx.guild.voice_client.is_playing():
-            return False
+async def preplay(ctx, source):
+    voice = ctx.guild.voice_client
+    if voice:
+        if voice.is_playing():
+            if voice.channel == ctx.author.voice.channel:
+                addqueue(source, ctx.guild)
+                excludelist(source, 'add')
+            else:
+                embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'errvoice')), color=0xFF0000)
+                await ctx.respond(embed=embed, delete_after=5)
+                return False
         else:
-            return True
-    except AttributeError:
-        pass
+            if not voice.channel == ctx.author.voice.channel:
+                await voice.move_to(ctx.author.voice.channel)
+            addqueue(source, ctx.guild)
+            excludelist(source, 'add')
+            nextqueue(ctx.guild, ctx.author.voice.channel.id)
+    else:
+        voice = await ctx.author.voice.channel.connect()
+        addqueue(source, ctx.guild)
+        excludelist(source, 'add')
+        nextqueue(ctx.guild, ctx.author.voice.channel.id)
+    return True
+
+def play(source, guild, channelid):
+    try:
+        # get the voice client for guild
+        voice = discord.utils.get(bot.voice_clients, guild=guild)
+        if voice:
+            resettimer(guild)
+            voice.play(discord.FFmpegPCMAudio(source), after=lambda e: nextqueue(guild, channelid))
+        else:
+            resetqueue(guild.id)        
+    except Exception as e:
+        print(e)
+    
+def addqueue(source, guild):
+    global temp
+    # check if a text file called "queue" exists in the temp folder
+    if os.path.isfile(os.path.join(temp, str(guild.id), "queue")):
+        # read a list file
+        with open(os.path.join(temp, str(guild.id), "queue"), "rb") as f:
+            queue = pickle.load(f)
+        # add the new source to the list
+        queue.append(source)
+        # write the list back to the file
+        with open(os.path.join(temp, str(guild.id), "queue"), "wb") as f:
+            pickle.dump(queue, f)
+    else:
+        # add source and write the file
+        with open(os.path.join(temp, str(guild.id), "queue"), "wb") as f:
+            queue = []
+            queue.append(source)
+            pickle.dump(queue, f)
+
+def nextqueue(guild, channelid):
+    global temp
+    # check if a text file called "queue" exists in the temp folder
+    if os.path.isfile(os.path.join(temp, str(guild.id), "queue")):
+        # read a list file
+        with open(os.path.join(temp, str(guild.id), "queue"), "rb") as f:
+            queue = pickle.load(f)
+        if len(queue) >= 1:
+            # get the first source in the list
+            source = queue[0]
+            # remove source from exlude list
+            excludelist(source, 'remove')
+            # remove the first item in the list
+            queue.pop(0)
+            # write the list back to the file
+            with open(os.path.join(temp, str(guild.id), "queue"), "wb") as f:
+                pickle.dump(queue, f)
+            # play the source
+            play(source, guild, channelid)
+        else:
+            # delete the file
+            os.remove(os.path.join(temp, str(guild.id), "queue"))
+
+def resetqueue(guildid):
+    global temp
+    # delete the file
+    os.remove(os.path.join(temp, str(guildid), "queue"))
+
+def excludelist(source, mode):
+    global exclude_list
+    if mode == "add":
+        exclude_list.append(source)
+    elif mode == "remove":
+        exclude_list.remove(source)
 
 # --------------------------------------------------
 # IBM Cloud Internal functions
@@ -299,119 +367,110 @@ async def langs(ctx):
 @bot.command(name="say", description="Convert text to speech", default_permissions=False)
 @commands.check(check_role)
 async def _say(ctx, *, args=None):
-    if await ensure_voice(ctx):
-        await ctx.defer()
-        config = configparser.ConfigParser()
-        author = ctx.author.id
-        if not args:
-            embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'errnoarg')), color=0xFF0000)
-            await ctx.respond(embed=embed, delete_after=5)
-            await ctx.message.delete()
-            return False
-        lang = args[0:2]
-        lang = lang.lower()
-        text = args[3:]
-        texta = text.lower()
-        if not lang in lang_list:
-            config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
-            lang = config['DEFAULT']['defvoice']
-        if "gg" in texta and "it" in lang:
-            texta = re.sub(r"\bgg\b", "g g", texta)
-        texta = "".join(texta)
-        tts = gTTS(texta, lang=lang)
-        if os.name == 'nt':
-            source = f"{temp}\{ctx.guild.id}\{ran()}.mp3"
-        else:
-            source = f"{temp}/{ctx.guild.id}/{ran()}.mp3"
-        try:
-            tts.save(source)
-        except gTTSError:
-            code = generate_random_code()
-            e = traceback.format_exc()
-            print(e + "Error Code: " + code)
-            embed = discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'unexpectederror')), color=0xFF0000)
-            await ctx.respond(embed=embed, delete_after=5)
-            return
-        wait(lambda: noplay(ctx), timeout_seconds=300)
-        source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(source))
-        ctx.guild.voice_client.play(source, after=lambda e: print(f'Player error: {e}') if e else None)
+    config = configparser.ConfigParser()
+    author = ctx.author.id
+    if not args:
+        embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'errnoarg')), color=0xFF0000)
+        await ctx.respond(embed=embed, delete_after=5)
+        await ctx.message.delete()
+        return False
+    lang = args[0:2]
+    lang = lang.lower()
+    text = args[3:]
+    texta = text.lower()
+    if not lang in lang_list:
+        config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
+        lang = config['DEFAULT']['defvoice']
+    if "gg" in texta and "it" in lang:
+        texta = re.sub(r"\bgg\b", "g g", texta)
+    texta = "".join(texta)
+    if texta == "" or texta.isspace():
+        embed = discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'errnoarg')), color=0xFF0000)
+        await ctx.respond(embed=embed, delete_after=5)
+        return
+    tts = gTTS(texta, lang=lang)
+    if os.name == 'nt':
+        source = f"{temp}\{ctx.guild.id}\{ran()}.mp3"
+    else:
+        source = f"{temp}/{ctx.guild.id}/{ran()}.mp3"
+    try:
+        tts.save(source)
+    except gTTSError:
+        code = generate_random_code()
+        e = traceback.format_exc()
+        print(e + "Error Code: " + code)
+        embed = discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'unexpectederror')), color=0xFF0000)
+        await ctx.respond(embed=embed, delete_after=5)
+        return
+    if await preplay(ctx, source):   
         embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), description=eval("f" + get_guild_language(ctx, 'saylangmess')), color=0x1eff00)
         await ctx.send(embed=embed, delete_after=1)
-        await resettimer(ctx)
 
 @bot.slash_command(name="say", description="Convert text to speech", default_permissions=False)
 @commands.check(check_role)
 async def say(ctx, lang: Option(str, "Choose a language", autocomplete=showlangs), text: Option(str, "Enter text to convert to speech")):
-    if await ensure_voice(ctx):
-        await ctx.defer()
-        config = configparser.ConfigParser()
-        author = ctx.author.id
-        lang = lang.lower()
-        texta = text.lower()
-        if not lang in lang_list:
-            config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
-            lang = config['DEFAULT']['defvoice']
-        if "gg" in texta and "it" in lang:
-            texta = re.sub(r"\bgg\b", "g g", texta)
-        texta = "".join(texta)
-        tts = gTTS(texta, lang=lang)
-        if os.name == 'nt':
-            source = f"{temp}\{ctx.guild.id}\{ran()}.mp3"
-        else:
-            source = f"{temp}/{ctx.guild.id}/{ran()}.mp3"
-        try:
-            tts.save(source)
-        except gTTSError:
-            code = generate_random_code()
-            e = traceback.format_exc()
-            print(e + "Error Code: " + code)
-            embed = discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'unexpectederror')), color=0xFF0000)
-            await ctx.respond(embed=embed, delete_after=5)
-            return
-        wait(lambda: noplay(ctx), timeout_seconds=300)
-        source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(source))
-        ctx.guild.voice_client.play(source, after=lambda e: print(f'Player error: {e}') if e else None)
+    await ctx.defer()
+    config = configparser.ConfigParser()
+    author = ctx.author.id
+    lang = lang.lower()
+    texta = text.lower()
+    if not lang in lang_list:
+        config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
+        lang = config['DEFAULT']['defvoice']
+    if "gg" in texta and "it" in lang:
+        texta = re.sub(r"\bgg\b", "g g", texta)
+    texta = "".join(texta)
+    tts = gTTS(texta, lang=lang)
+    if os.name == 'nt':
+        source = f"{temp}\{ctx.guild.id}\{ran()}.mp3"
+    else:
+        source = f"{temp}/{ctx.guild.id}/{ran()}.mp3"
+    try:
+        tts.save(source)
+    except gTTSError:
+        code = generate_random_code()
+        e = traceback.format_exc()
+        print(e + "Error Code: " + code)
+        embed = discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'unexpectederror')), color=0xFF0000)
+        await ctx.respond(embed=embed, delete_after=5)
+        return
+    if await preplay(ctx, source):
         embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), description=eval("f" + get_guild_language(ctx, 'saylangmess')), color=0x1eff00)
         await ctx.respond(embed=embed, allowed_mentions=discord.AllowedMentions(replied_user=False))
-        await resettimer(ctx)
 
 async def hidsay(ctx, lang, text):
-    if await ensure_voice(ctx):
-        await ctx.defer()
-        config = configparser.ConfigParser()
-        author = ctx.author.id
-        lang = lang.lower()
-        texta = text.lower()
-        if not lang in lang_list:
-            config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
-            lang = config['DEFAULT']['defvoice']
-        if "gg" in texta and "it" in lang:
-            texta = re.sub(r"\bgg\b", "g g", texta)
-        texta = "".join(texta)
-        if texta == "" or texta.isspace():
-            embed = discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'errnoarg')), color=0xFF0000)
-            await ctx.respond(embed=embed, delete_after=5)
-            return
-        tts = gTTS(texta, lang=lang)
-        if os.name == 'nt':
-            source = f"{temp}\{ctx.guild.id}\{ran()}.mp3"
-        else:
-            source = f"{temp}/{ctx.guild.id}/{ran()}.mp3"
-        try:
-            tts.save(source)
-        except gTTSError:
-            code = generate_random_code()
-            e = traceback.format_exc()
-            print(e + "Error Code: " + code)
-            embed = discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'unexpectederror')), color=0xFF0000)
-            await ctx.respond(embed=embed, delete_after=5)
-            return
-        wait(lambda: noplay(ctx), timeout_seconds=300)
-        source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(source))
-        ctx.guild.voice_client.play(source, after=lambda e: print(f'Player error: {e}') if e else None)
+    await ctx.defer()
+    config = configparser.ConfigParser()
+    author = ctx.author.id
+    lang = lang.lower()
+    texta = text.lower()
+    if not lang in lang_list:
+        config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
+        lang = config['DEFAULT']['defvoice']
+    if "gg" in texta and "it" in lang:
+        texta = re.sub(r"\bgg\b", "g g", texta)
+    texta = "".join(texta)
+    if texta == "" or texta.isspace():
+        embed = discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'errnoarg')), color=0xFF0000)
+        await ctx.respond(embed=embed, delete_after=5)
+        return
+    tts = gTTS(texta, lang=lang)
+    if os.name == 'nt':
+        source = f"{temp}\{ctx.guild.id}\{ran()}.mp3"
+    else:
+        source = f"{temp}/{ctx.guild.id}/{ran()}.mp3"
+    try:
+        tts.save(source)
+    except gTTSError:
+        code = generate_random_code()
+        e = traceback.format_exc()
+        print(e + "Error Code: " + code)
+        embed = discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'unexpectederror')), color=0xFF0000)
+        await ctx.respond(embed=embed, delete_after=5)
+        return
+    if await preplay(ctx, source):
         embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), description=eval("f" + get_guild_language(ctx, 'saylangmess')), color=0x1eff00)
         await ctx.respond(embed=embed, allowed_mentions=discord.AllowedMentions(replied_user=False), delete_after=1)
-        await resettimer(ctx)
 
 # --------------------------------------------------
 # Disconnect the bot from the voice channel
@@ -951,12 +1010,16 @@ async def _settings(ctx, context):
 
 @tasks.loop(seconds=120)
 async def delete_mp3():
+    global exclude_list
     for root, dirs, files in os.walk(temp):
         for file in files:
             if file.endswith(".mp3"):
-                try:
-                    os.remove(os.path.join(root, file))
-                except PermissionError:
+                if os.path.join(root, file) not in exclude_list:
+                    try:
+                        os.remove(os.path.join(root, file))
+                    except PermissionError:
+                        pass
+                else:
                     pass
 
 @tasks.loop(seconds=1800)
@@ -1026,11 +1089,12 @@ async def check_timer(bot):
         if os.path.exists(os.path.join(temp, str(guild.id),'.clock')):
             config.read(os.path.join(temp, str(guild.id),'.clock'), encoding='utf-8')
             if time.time() - float(config['DEFAULT']['time']) >= 240:
-                try:
-                    await guild.voice_client.disconnect()
-                    print(f"-> Disconnected for inactivity from '{guild.name}'")
-                except AttributeError:
-                    pass
+                if guild.voice_client is not None:
+                    try:
+                        await guild.voice_client.disconnect()
+                        print(f"-> Disconnected for inactivity from '{guild.name}'")
+                    except AttributeError:
+                        pass
                 os.remove(os.path.join(temp, str(guild.id),'.clock'))
         else:
             continue
@@ -1203,7 +1267,7 @@ async def on_guild_remove(guild):
 
 @bot.event
 async def on_voice_state_update(member, before, after):
-    voice_state = member.guild.voice_client
+    voice_state = discord.utils.get(bot.voice_clients, guild=member.guild)
     if member.id == bot.user.id:
         if member.voice != None:
             try:
@@ -1215,8 +1279,6 @@ async def on_voice_state_update(member, before, after):
             os.remove(os.path.join(temp, str(member.guild.id),'.clock'))
         except FileNotFoundError:
             pass
-    elif len(voice_state.channel.members) == 1:
-        await voice_state.disconnect()
     return
 
 
