@@ -184,10 +184,16 @@ async def preplay(ctx, source):
                 return False
     else:
         if ctx.author.voice:
+            try:
+                channid = ctx.author.voice.channel.id
+            except:
+                embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'erruvc')), color=0xFF0000)
+                await ctx.respond(embed=embed, delete_after=5)
+                return False
             voice = await ctx.author.voice.channel.connect()
             addqueue(source, ctx.guild)
             excludelist(source, 'add')
-            nextqueue(ctx.guild, ctx.author.voice.channel.id)
+            nextqueue(ctx.guild, channid)
         else:
             embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'erruvc')), color=0xFF0000)
             await ctx.respond(embed=embed, delete_after=5)
