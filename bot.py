@@ -366,7 +366,6 @@ async def _say(ctx, *, args=None):
     if not args:
         embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'errnoarg')), color=0xFF0000)
         await ctx.respond(embed=embed, delete_after=5)
-        await ctx.message.delete()
         return False
     lang = args[0:2]
     lang = lang.lower()
