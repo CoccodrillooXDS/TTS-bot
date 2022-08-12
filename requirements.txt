@@ -2,7 +2,6 @@ py-cord>=2.0.0
 py-cord[voice]>=2.0.0
 PyNaCl
 gtts
-waiting
 asyncio
 nest_asyncio
 ibm-cos-sdk
