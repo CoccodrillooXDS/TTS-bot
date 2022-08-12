@@ -37,7 +37,7 @@ bot = bridge.Bot(
     activity=discord.Game(name="Loading..."),
 )
 
-bot_version = "v3.3.2"
+bot_version = "v3.3.3"
 
 # --------------------------------------------------
 # Folders
@@ -56,7 +56,6 @@ supported_languages_message = ""
 lang_list = []
 allroles = []
 installed_langs = []
-exclude_list = []
 conf = {'role': 'TTS', 'lang': 'en', 'autosaychan': '[]', 'defvoice': 'en', 'silenceupdates': 'False', 'updateschannel': 'system'}
 punctuation = ['!', '"', '#', '$', '%', '&', "'", '*', '+', '-', '.', ',', ':', ';', '=', '?', '[', ']', '^', '_', '|', '~']
 
@@ -162,7 +161,6 @@ async def preplay(ctx, source):
             if ctx.author.voice:
                 if voice.channel == ctx.author.voice.channel:
                     addqueue(source, ctx.guild)
-                    excludelist(source, 'add')
                 else:
                     embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'errvoice')), color=0xFF0000)
                     await ctx.respond(embed=embed, delete_after=5)
@@ -176,7 +174,6 @@ async def preplay(ctx, source):
                 if not voice.channel == ctx.author.voice.channel:
                     await voice.move_to(ctx.author.voice.channel)
                 addqueue(source, ctx.guild)
-                excludelist(source, 'add')
                 nextqueue(ctx.guild, ctx.author.voice.channel.id)
             else:
                 embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'erruvc')), color=0xFF0000)
@@ -192,7 +189,6 @@ async def preplay(ctx, source):
                 return False
             voice = await ctx.author.voice.channel.connect()
             addqueue(source, ctx.guild)
-            excludelist(source, 'add')
             nextqueue(ctx.guild, channid)
         else:
             embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'erruvc')), color=0xFF0000)
@@ -202,7 +198,6 @@ async def preplay(ctx, source):
 
 def play(source, guild, channelid):
     try:
-        # get the voice client for guild
         voice = discord.utils.get(bot.voice_clients, guild=guild)
         if voice:
             resettimer(guild)
@@ -214,18 +209,13 @@ def play(source, guild, channelid):
     
 def addqueue(source, guild):
     global temp
-    # check if a text file called "queue" exists in the temp folder
     if os.path.isfile(os.path.join(temp, str(guild.id), "queue")):
-        # read a list file
         with open(os.path.join(temp, str(guild.id), "queue"), "rb") as f:
             queue = pickle.load(f)
-        # add the new source to the list
         queue.append(source)
-        # write the list back to the file
         with open(os.path.join(temp, str(guild.id), "queue"), "wb") as f:
             pickle.dump(queue, f)
     else:
-        # add source and write the file
         with open(os.path.join(temp, str(guild.id), "queue"), "wb") as f:
             queue = []
             queue.append(source)
@@ -233,38 +223,21 @@ def addqueue(source, guild):
 
 def nextqueue(guild, channelid):
     global temp
-    # check if a text file called "queue" exists in the temp folder
     if os.path.isfile(os.path.join(temp, str(guild.id), "queue")):
-        # read a list file
         with open(os.path.join(temp, str(guild.id), "queue"), "rb") as f:
             queue = pickle.load(f)
         if len(queue) >= 1:
-            # get the first source in the list
             source = queue[0]
-            # remove source from exlude list
-            excludelist(source, 'remove')
-            # remove the first item in the list
             queue.pop(0)
-            # write the list back to the file
             with open(os.path.join(temp, str(guild.id), "queue"), "wb") as f:
                 pickle.dump(queue, f)
-            # play the source
             play(source, guild, channelid)
         else:
-            # delete the file
             os.remove(os.path.join(temp, str(guild.id), "queue"))
 
 def resetqueue(guildid):
     global temp
-    # delete the file
     os.remove(os.path.join(temp, str(guildid), "queue"))
-
-def excludelist(source, mode):
-    global exclude_list
-    if mode == "add":
-        exclude_list.append(source)
-    elif mode == "remove":
-        exclude_list.remove(source)
 
 # --------------------------------------------------
 # IBM Cloud Internal functions
@@ -1029,20 +1002,6 @@ async def _settings(ctx, context):
 # Tasks
 # --------------------------------------------------
 
-@tasks.loop(seconds=120)
-async def delete_mp3():
-    global exclude_list
-    for root, dirs, files in os.walk(temp):
-        for file in files:
-            if file.endswith(".mp3"):
-                if os.path.join(root, file) not in exclude_list:
-                    try:
-                        os.remove(os.path.join(root, file))
-                    except PermissionError:
-                        pass
-                else:
-                    pass
-
 @tasks.loop(seconds=1800)
 async def check_update():
     try:
@@ -1216,7 +1175,6 @@ async def on_ready():
     print(f"{bot.user} has finished up loading!")
     try:
         check_timer.start(bot)
-        delete_mp3.start()
     except:
         pass
 
