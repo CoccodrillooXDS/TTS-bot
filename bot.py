@@ -37,7 +37,7 @@ bot = bridge.Bot(
     activity=discord.Game(name="Loading..."),
 )
 
-bot_version = "v3.3.3"
+bot_version = "v3.3.4"
 
 # --------------------------------------------------
 # Folders
@@ -1185,7 +1185,10 @@ async def on_message(message):
         return
     config.read(os.path.join(configs, str(message.guild.id)), encoding='utf-8')
     ctx = await bot.get_context(message)
-    a = json.loads(config['DEFAULT']['autosaychan'])
+    try:
+        a = json.loads(config['DEFAULT']['autosaychan'])
+    except KeyError:
+        a = []
     if int(message.channel.id) in a:
         if message.author.bot:
             return
