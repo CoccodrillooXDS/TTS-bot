@@ -1122,6 +1122,14 @@ async def on_ready():
             continue
         if "zh-TW" in i:
             continue
+        if "cy" in i:
+            continue
+        if "eo" in i:
+            continue
+        if "hy" in i:
+            continue
+        if "mk" in i:
+            continue
         supported_languages_message += f"{langs[i]} -> {i}\n"
         lang_list.append(i)
     await check_installed_languages()
