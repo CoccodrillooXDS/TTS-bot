@@ -187,7 +187,10 @@ async def preplay(ctx, source):
                 embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'erruvc')), color=0xFF0000)
                 await ctx.respond(embed=embed, delete_after=5)
                 return False
-            voice = await ctx.author.voice.channel.connect()
+            try:
+                voice = await ctx.author.voice.channel.connect()
+            except:
+                pass
             addqueue(source, ctx.guild)
             nextqueue(ctx.guild, channid)
         else:
@@ -1191,7 +1194,11 @@ async def on_message(message):
     config = configparser.ConfigParser()
     if message.author.id == bot.user.id:
         return
-    config.read(os.path.join(configs, str(message.guild.id)), encoding='utf-8')
+    try:
+        config.read(os.path.join(configs, str(message.guild.id)), encoding='utf-8')
+    except:
+        await bot.process_commands(message)
+        return
     ctx = await bot.get_context(message)
     try:
         a = json.loads(config['DEFAULT']['autosaychan'])
