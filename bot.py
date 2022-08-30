@@ -37,7 +37,7 @@ bot = bridge.Bot(
     activity=discord.Game(name="Loading..."),
 )
 
-bot_version = "v3.3.5"
+bot_version = "v3.3.6"
 
 # --------------------------------------------------
 # Folders
