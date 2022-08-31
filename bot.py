@@ -37,7 +37,7 @@ bot = bridge.Bot(
     activity=discord.Game(name="Loading..."),
 )
 
-bot_version = "v3.3.6"
+bot_version = "v3.3.7"
 
 # --------------------------------------------------
 # Folders
@@ -384,6 +384,47 @@ async def _say(ctx, *, args=None):
         embed = discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'errnoarg')), color=0xFF0000)
         await ctx.respond(embed=embed, delete_after=5)
         return
+    user = re.findall(r"<@!?(\d+)>", texta)
+    if user:
+        for x in user:
+            try:
+                u = await bot.fetch_user(int(x))
+            except:
+                texta = re.sub(r"<@!?({})>".format(x), "Invalid User", texta)
+                continue
+            texta = re.sub(r"<@!?({})>".format(x), u.name, texta)
+                
+    chann = re.findall(r"<#(\d+)>", texta)
+    if chann:
+        for x in chann:
+            try:
+                c = await bot.fetch_channel(int(x))
+            except:
+                texta = re.sub(r"<#({})>".format(x), "Invalid Channel", texta)
+                continue
+            texta = re.sub(r"<#({})>".format(x), c.name, texta)
+    role = re.findall(r"<@&(\d+)>", texta)
+    if role:
+        for x in role:
+            try:
+                r = ctx.guild.get_role(int(x))
+            except:
+                texta = re.sub(r"<@&({})>".format(x), "Invalid Role", texta)
+                continue
+            texta = re.sub(r"<@&({})>".format(x), r.name, texta)
+    texta = re.sub(r"<\/(\w+):(\d+)>", r"\1", texta)
+    texta = re.sub(r"<a?:(\w+):(\d+)>", r"\1", texta)
+    texta = re.sub(r"<:(\w+):(\d+)>", r"\1", texta)
+    time1 = re.findall(r"<t:(\d+)>", texta)
+    if time1:
+        for x in time1:
+            t = datetime.datetime.fromtimestamp(int(x))
+            texta = re.sub(r"<t:({})>".format(x), t.strftime("%A %d %B %Y, %H:%M:%S"), texta)
+    time2 = re.findall(r"<t:(\d+):(\w+)>", texta)
+    if time2:
+        for x in time2:
+            t = datetime.datetime.fromtimestamp(int(x[0]))
+            texta = re.sub(r"<t:({}):({})>".format(x[0], x[1]), t.strftime("%A %d %B %Y, %H:%M:%S"), texta)
     tts = gTTS(texta, lang=lang)
     if os.name == 'nt':
         source = f"{temp}\{ctx.guild.id}\{ran()}.mp3"
@@ -398,9 +439,13 @@ async def _say(ctx, *, args=None):
         embed = discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'unexpectederror')), color=0xFF0000)
         await ctx.respond(embed=embed, delete_after=5)
         return
-    if await preplay(ctx, source):   
+    if await preplay(ctx, source):
         embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), description=eval("f" + get_guild_language(ctx, 'saylangmess')), color=0x1eff00)
-        await ctx.send(embed=embed, delete_after=1)
+        embwarning=discord.Embed(description=eval(get_guild_language(ctx, 'warningmsg')), color=0xfcba03)
+        view = View()
+        view.add_item(Button(style=discord.ButtonStyle.link, label=eval("f" + get_guild_language(ctx, 'learnmore')), url="https://support.discord.com/hc/en-us/articles/1500000368501-Slash-Commands-FAQ"))
+        # await ctx.send(embed=embed, delete_after=1)
+        await ctx.send(embed=embwarning, view=view, delete_after=3)
 
 @bot.slash_command(name="say", description="Convert text to speech", default_permissions=False)
 @commands.check(check_role)
@@ -416,6 +461,47 @@ async def say(ctx, lang: Option(str, "Choose a language", autocomplete=showlangs
     if "gg" in texta and "it" in lang:
         texta = re.sub(r"\bgg\b", "g g", texta)
     texta = "".join(texta)
+    user = re.findall(r"<@!?(\d+)>", texta)
+    if user:
+        for x in user:
+            try:
+                u = await bot.fetch_user(int(x))
+            except:
+                texta = re.sub(r"<@!?({})>".format(x), "Invalid User", texta)
+                continue
+            texta = re.sub(r"<@!?({})>".format(x), u.name, texta)
+                
+    chann = re.findall(r"<#(\d+)>", texta)
+    if chann:
+        for x in chann:
+            try:
+                c = await bot.fetch_channel(int(x))
+            except:
+                texta = re.sub(r"<#({})>".format(x), "Invalid Channel", texta)
+                continue
+            texta = re.sub(r"<#({})>".format(x), c.name, texta)
+    role = re.findall(r"<@&(\d+)>", texta)
+    if role:
+        for x in role:
+            try:
+                r = ctx.guild.get_role(int(x))
+            except:
+                texta = re.sub(r"<@&({})>".format(x), "Invalid Role", texta)
+                continue
+            texta = re.sub(r"<@&({})>".format(x), r.name, texta)
+    texta = re.sub(r"<\/(\w+):(\d+)>", r"\1", texta)
+    texta = re.sub(r"<a?:(\w+):(\d+)>", r"\1", texta)
+    texta = re.sub(r"<:(\w+):(\d+)>", r"\1", texta)
+    time1 = re.findall(r"<t:(\d+)>", texta)
+    if time1:
+        for x in time1:
+            t = datetime.datetime.fromtimestamp(int(x))
+            texta = re.sub(r"<t:({})>".format(x), t.strftime("%A %d %B %Y, %H:%M:%S"), texta)
+    time2 = re.findall(r"<t:(\d+):(\w+)>", texta)
+    if time2:
+        for x in time2:
+            t = datetime.datetime.fromtimestamp(int(x[0]))
+            texta = re.sub(r"<t:({}):({})>".format(x[0], x[1]), t.strftime("%A %d %B %Y, %H:%M:%S"), texta)
     tts = gTTS(texta, lang=lang)
     if os.name == 'nt':
         source = f"{temp}\{ctx.guild.id}\{ran()}.mp3"
@@ -450,6 +536,47 @@ async def hidsay(ctx, lang, text):
         embed = discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'errnoarg')), color=0xFF0000)
         await ctx.respond(embed=embed, delete_after=5)
         return
+    user = re.findall(r"<@!?(\d+)>", texta)
+    if user:
+        for x in user:
+            try:
+                u = await bot.fetch_user(int(x))
+            except:
+                texta = re.sub(r"<@!?({})>".format(x), "Invalid User", texta)
+                continue
+            texta = re.sub(r"<@!?({})>".format(x), u.name, texta)
+                
+    chann = re.findall(r"<#(\d+)>", texta)
+    if chann:
+        for x in chann:
+            try:
+                c = await bot.fetch_channel(int(x))
+            except:
+                texta = re.sub(r"<#({})>".format(x), "Invalid Channel", texta)
+                continue
+            texta = re.sub(r"<#({})>".format(x), c.name, texta)
+    role = re.findall(r"<@&(\d+)>", texta)
+    if role:
+        for x in role:
+            try:
+                r = ctx.guild.get_role(int(x))
+            except:
+                texta = re.sub(r"<@&({})>".format(x), "Invalid Role", texta)
+                continue
+            texta = re.sub(r"<@&({})>".format(x), r.name, texta)
+    texta = re.sub(r"<\/(\w+):(\d+)>", r"\1", texta)
+    texta = re.sub(r"<a?:(\w+):(\d+)>", r"\1", texta)
+    texta = re.sub(r"<:(\w+):(\d+)>", r"\1", texta)
+    time1 = re.findall(r"<t:(\d+)>", texta)
+    if time1:
+        for x in time1:
+            t = datetime.datetime.fromtimestamp(int(x))
+            texta = re.sub(r"<t:({})>".format(x), t.strftime("%A %d %B %Y, %H:%M:%S"), texta)
+    time2 = re.findall(r"<t:(\d+):(\w+)>", texta)
+    if time2:
+        for x in time2:
+            t = datetime.datetime.fromtimestamp(int(x[0]))
+            texta = re.sub(r"<t:({}):({})>".format(x[0], x[1]), t.strftime("%A %d %B %Y, %H:%M:%S"), texta)
     tts = gTTS(texta, lang=lang)
     if os.name == 'nt':
         source = f"{temp}\{ctx.guild.id}\{ran()}.mp3"
