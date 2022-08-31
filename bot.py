@@ -1336,6 +1336,8 @@ async def on_message(message):
             return
         if message.content.startswith('>'):
             await bot.process_commands(message)
+            embwarning=discord.Embed(description=eval(get_guild_language(ctx, 'warningmsg')), color=0xfcba03)
+            await ctx.send(embed=embwarning, delete_after=3)
             return
         voice = config['DEFAULT']['defvoice']
         if message.content.startswith(tuple(punctuation)):
