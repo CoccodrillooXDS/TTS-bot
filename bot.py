@@ -37,7 +37,7 @@ bot = bridge.Bot(
     activity=discord.Game(name="Loading..."),
 )
 
-bot_version = "v3.3.7"
+bot_version = "v3.4.0"
 
 # --------------------------------------------------
 # Folders
@@ -56,7 +56,7 @@ supported_languages_message = ""
 lang_list = []
 allroles = []
 installed_langs = []
-conf = {'role': 'TTS', 'lang': 'en', 'autosaychan': '[]', 'defvoice': 'en', 'silenceupdates': 'False', 'updateschannel': 'system'}
+conf = {'role': 'TTS', 'lang': 'en', 'autosaychan': '[]', 'defvoice': 'en', 'silenceupdates': 'False', 'updateschannel': 'system', 'multiuser': 'True'}
 punctuation = ['!', '"', '#', '$', '%', '&', "'", '*', '+', '-', '.', ',', ':', ';', '=', '?', '[', ']', '^', '_', '|', '~']
 
 TOKEN = ""
@@ -364,8 +364,10 @@ async def langs(ctx):
 @bot.command(name="say", description="Convert text to speech", default_permissions=False)
 @commands.check(check_role)
 async def _say(ctx, *, args=None):
+    global temp
     config = configparser.ConfigParser()
     author = ctx.author.id
+    authorname = ctx.author.name
     if not args:
         embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'errnoarg')), color=0xFF0000)
         await ctx.respond(embed=embed, delete_after=5)
@@ -392,8 +394,7 @@ async def _say(ctx, *, args=None):
             except:
                 texta = re.sub(r"<@!?({})>".format(x), "Invalid User", texta)
                 continue
-            texta = re.sub(r"<@!?({})>".format(x), u.name, texta)
-                
+            texta = re.sub(r"<@!?({})>".format(x), u.name, texta)           
     chann = re.findall(r"<#(\d+)>", texta)
     if chann:
         for x in chann:
@@ -425,6 +426,22 @@ async def _say(ctx, *, args=None):
         for x in time2:
             t = datetime.datetime.fromtimestamp(int(x[0]))
             texta = re.sub(r"<t:({}):({})>".format(x[0], x[1]), t.strftime("%A %d %B %Y, %H:%M:%S"), texta)
+    users = []
+    if os.path.isfile(os.path.join(temp, str(ctx.guild.id), ".users")):
+        with open(os.path.join(temp, str(ctx.guild.id), ".users"), "rb") as f:
+            users = pickle.load(f)
+        if not author in users:
+            users.append(author)
+            with open(os.path.join(temp, str(ctx.guild.id), ".users"), "wb") as f:
+                pickle.dump(users, f)
+        if len(users) > 1:
+            config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
+            if config['DEFAULT']['multiuser'] == "True":
+                texta = f"{authorname}: {texta}"
+    else:
+        users.append(author)
+        with open(os.path.join(temp, str(ctx.guild.id), ".users"), "wb") as f:
+            pickle.dump(users, f)
     tts = gTTS(texta, lang=lang)
     if os.name == 'nt':
         source = f"{temp}\{ctx.guild.id}\{ran()}.mp3"
@@ -441,18 +458,16 @@ async def _say(ctx, *, args=None):
         return
     if await preplay(ctx, source):
         embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), description=eval("f" + get_guild_language(ctx, 'saylangmess')), color=0x1eff00)
-        embwarning=discord.Embed(description=eval(get_guild_language(ctx, 'warningmsg')), color=0xfcba03)
-        view = View()
-        view.add_item(Button(style=discord.ButtonStyle.link, label=eval("f" + get_guild_language(ctx, 'learnmore')), url="https://support.discord.com/hc/en-us/articles/1500000368501-Slash-Commands-FAQ"))
-        # await ctx.send(embed=embed, delete_after=1)
-        await ctx.send(embed=embwarning, view=view, delete_after=3)
+        await ctx.send(embed=embed, delete_after=1)
 
 @bot.slash_command(name="say", description="Convert text to speech", default_permissions=False)
 @commands.check(check_role)
 async def say(ctx, lang: Option(str, "Choose a language", autocomplete=showlangs), text: Option(str, "Enter text to convert to speech")):
+    global temp
     await ctx.defer()
     config = configparser.ConfigParser()
     author = ctx.author.id
+    authorname = ctx.author.name
     lang = lang.lower()
     texta = text.lower()
     if not lang in lang_list:
@@ -502,6 +517,22 @@ async def say(ctx, lang: Option(str, "Choose a language", autocomplete=showlangs
         for x in time2:
             t = datetime.datetime.fromtimestamp(int(x[0]))
             texta = re.sub(r"<t:({}):({})>".format(x[0], x[1]), t.strftime("%A %d %B %Y, %H:%M:%S"), texta)
+    users = []
+    if os.path.isfile(os.path.join(temp, str(ctx.guild.id), ".users")):
+        with open(os.path.join(temp, str(ctx.guild.id), ".users"), "rb") as f:
+            users = pickle.load(f)
+        if not author in users:
+            users.append(author)
+            with open(os.path.join(temp, str(ctx.guild.id), ".users"), "wb") as f:
+                pickle.dump(users, f)
+        if len(users) > 1:
+            config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
+            if config['DEFAULT']['multiuser'] == "True":
+                texta = f"{authorname}: {texta}"
+    else:
+        users.append(author)
+        with open(os.path.join(temp, str(ctx.guild.id), ".users"), "wb") as f:
+            pickle.dump(users, f)
     tts = gTTS(texta, lang=lang)
     if os.name == 'nt':
         source = f"{temp}\{ctx.guild.id}\{ran()}.mp3"
@@ -521,9 +552,11 @@ async def say(ctx, lang: Option(str, "Choose a language", autocomplete=showlangs
         await ctx.respond(embed=embed, allowed_mentions=discord.AllowedMentions(replied_user=False))
 
 async def hidsay(ctx, lang, text):
+    global temp
     await ctx.defer()
     config = configparser.ConfigParser()
     author = ctx.author.id
+    authorname = ctx.author.name
     lang = lang.lower()
     texta = text.lower()
     if not lang in lang_list:
@@ -577,6 +610,22 @@ async def hidsay(ctx, lang, text):
         for x in time2:
             t = datetime.datetime.fromtimestamp(int(x[0]))
             texta = re.sub(r"<t:({}):({})>".format(x[0], x[1]), t.strftime("%A %d %B %Y, %H:%M:%S"), texta)
+    users = []
+    if os.path.isfile(os.path.join(temp, str(ctx.guild.id), ".users")):
+        with open(os.path.join(temp, str(ctx.guild.id), ".users"), "rb") as f:
+            users = pickle.load(f)
+        if not author in users:
+            users.append(author)
+            with open(os.path.join(temp, str(ctx.guild.id), ".users"), "wb") as f:
+                pickle.dump(users, f)
+        if len(users) > 1:
+            config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
+            if config['DEFAULT']['multiuser'] == "True":
+                texta = f"{authorname}: {texta}"
+    else:
+        users.append(author)
+        with open(os.path.join(temp, str(ctx.guild.id), ".users"), "wb") as f:
+            pickle.dump(users, f)
     tts = gTTS(texta, lang=lang)
     if os.name == 'nt':
         source = f"{temp}\{ctx.guild.id}\{ran()}.mp3"
@@ -770,6 +819,11 @@ async def _settings(ctx, context):
     else:
         if config["DEFAULT"]["silenceupdates"] == "False":
             sus = eval("f" + get_guild_language(ctx, 'disabled'))
+    if config["DEFAULT"]["multiuser"] == "True":
+        mus = eval("f" + get_guild_language(ctx, 'enabled'))
+    else:
+        if config["DEFAULT"]["multiuser"] == "False":
+            mus = eval("f" + get_guild_language(ctx, 'disabled'))
     usci = 0
     if config["DEFAULT"]["updateschannel"] == "system" or config["DEFAULT"]["updateschannel"] == "":
         try:
@@ -791,6 +845,7 @@ async def _settings(ctx, context):
     buttonautosaychan = Button(custom_id="casc", label=eval("f" + get_guild_language(ctx, 'changeautosaychannel')), style=discord.ButtonStyle.secondary, emoji="#️⃣")
     buttonchangeupdatechannel = Button(custom_id="cuc", label=eval("f" + get_guild_language(ctx, 'changeupdatechannel')), style=discord.ButtonStyle.secondary, emoji="🗣️")
     buttonsilenceupdates = Button(custom_id="su", label=eval("f" + get_guild_language(ctx, 'silenceupdates')), style=discord.ButtonStyle.secondary, emoji="🔇")
+    buttonmultiuser = Button(custom_id="mu", label=eval("f" + get_guild_language(ctx, 'multiuser')), style=discord.ButtonStyle.secondary, emoji="👥")
     view = View()
     view.add_item(buttonchangerole)
     view.add_item(buttonchangelanguage)
@@ -798,6 +853,7 @@ async def _settings(ctx, context):
     view.add_item(buttonautosaychan)
     view.add_item(buttonchangeupdatechannel)
     view.add_item(buttonsilenceupdates)
+    view.add_item(buttonmultiuser)
     view.add_item(buttonclose)
     await ctx.respond(embed=embed, view=view, delete_after=20)
     async def defvoice(ctx):
@@ -1125,6 +1181,22 @@ async def _settings(ctx, context):
         await ctx.response.send_message(embed=embed, delete_after=1)
         await _settings(context, context)
     buttonsilenceupdates.callback = silenceupdates
+    async def multiuser(ctx):
+        config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
+        if config["DEFAULT"]["multiuser"] == "True":
+            config.set('DEFAULT', 'multiuser', "False")
+            embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), description=eval("f" + get_guild_language(ctx, 'singleusermsg')), color=0x1eff00)
+        else:
+            config.set('DEFAULT', 'multiuser', "True")
+            embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), description=eval("f" + get_guild_language(ctx, 'multiusermsg')), color=0x1eff00)
+        with open(os.path.join(configs, str(ctx.guild.id)), 'w') as configfile:
+            config.write(configfile)
+        if use_ibm:
+            upload_configs()
+        await ctx.message.delete()
+        await ctx.response.send_message(embed=embed, delete_after=3)
+        await _settings(context, context)
+    buttonmultiuser.callback = multiuser
 
 
 # --------------------------------------------------
@@ -1337,7 +1409,9 @@ async def on_message(message):
         if message.content.startswith('>'):
             await bot.process_commands(message)
             embwarning=discord.Embed(description=eval(get_guild_language(ctx, 'warningmsg')), color=0xfcba03)
-            await ctx.send(embed=embwarning, delete_after=3)
+            view = View()
+            view.add_item(Button(style=discord.ButtonStyle.link, label=eval("f" + get_guild_language(ctx, 'learnmore')), url="https://support.discord.com/hc/en-us/articles/1500000368501-Slash-Commands-FAQ"))
+            await ctx.send(embed=embwarning, view=view, delete_after=3)
             return
         voice = config['DEFAULT']['defvoice']
         if message.content.startswith(tuple(punctuation)):
@@ -1402,6 +1476,10 @@ async def on_voice_state_update(member, before, after):
     if voice_state is None:
         try:
             os.remove(os.path.join(temp, str(member.guild.id),'.clock'))
+        except FileNotFoundError:
+            pass
+        try:
+            os.remove(os.path.join(temp, str(member.guild.id),'.users'))
         except FileNotFoundError:
             pass
     return
