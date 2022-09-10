@@ -37,7 +37,7 @@ bot = bridge.Bot(
     activity=discord.Game(name="Loading..."),
 )
 
-bot_version = "v3.4.0"
+bot_version = "v3.4.1"
 
 # --------------------------------------------------
 # Folders
@@ -110,8 +110,11 @@ async def loadroles(bot):
         config = configparser.ConfigParser()
         config.read(os.path.join(configs, str(guild.id)), encoding='utf-8')
         if not discord.utils.get(guild.roles, name=config['DEFAULT']['role']):
-            await guild.create_role(name=config['DEFAULT']['role'])
-            print(f"-> Role '{config['DEFAULT']['role']}' created in {guild.name}")
+            try:
+                await guild.create_role(name=config['DEFAULT']['role'])
+                print(f"-> Role '{config['DEFAULT']['role']}' created in {guild.name}")
+            except:
+                print(f"-> Role '{config['DEFAULT']['role']}' could not be created in {guild.name}")
         else:
             print(f"-> Role '{config['DEFAULT']['role']}' found in {guild.name}")
         allroles.append(config['DEFAULT']['role'])
@@ -126,7 +129,15 @@ def resettimer(guild):
 async def check_role(ctx):
     config = configparser.ConfigParser()
     config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
-    role = discord.utils.get(ctx.guild.roles, name=config['DEFAULT']['role'])
+    try:
+        role = discord.utils.get(ctx.guild.roles, name=config['DEFAULT']['role'])
+    except:
+        config = configparser.ConfigParser()
+        config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
+        embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'errnorole')), color=0xFF0000)
+        embed.set_thumbnail(url="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Antu_dialog-error.svg/1024px-Antu_dialog-error.svg.png")
+        await ctx.respond(embed=embed, delete_after=5)
+        return False
     if role in ctx.author.roles:
         return True
     else:
@@ -1377,8 +1388,11 @@ async def on_ready():
     print(f"Guild configs loaded (Step {str(an)}/{str(n)})")
     an += 1
     print(f"Checking if all servers have the role specified in config... (Step {str(an)}/{str(n)})")
-    await loadroles(bot)
-    print(f"All servers have the specified role (Step {str(an)}/{str(n)})")
+    try:
+        await loadroles(bot)
+        print(f"All servers have the specified role (Step {str(an)}/{str(n)})")
+    except:
+        print(f"An error occurred when loading roles (Step {str(an)}/{str(n)})")
     await bot.change_presence(activity=discord.Game(name=f"/help | {len(bot.guilds)} servers"))
     bot.uptime = datetime.datetime.utcnow()
     print(f"{bot.user} has finished up loading!")

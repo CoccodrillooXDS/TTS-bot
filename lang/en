@@ -1,6 +1,7 @@
 [DEFAULT]
 errtitle = "Error :("
 errrole = "You can't use this command.\nYou don't have the '{config['DEFAULT']['role']}' role"
+errnorole = "The role '{config['DEFAULT']['role']}' doesn't exist. Please create it and try again."
 errnovc = "I'm not connected to any voice channel!"
 erruvc = "You are not connected to a voice channel!\nConnect to a VC and try again."
 errnoarg = "You didn't provide the required argument(s) to run this command!"

@@ -1,6 +1,7 @@
 [DEFAULT]
 errtitle = "Errore :("
 errrole = "Non puoi utilizzare questo comando.\nNon hai il ruolo '{config['DEFAULT']['role']}'"
+errnorole = "Il ruolo '{config['DEFAULT']['role']}' non esiste. Crealo e riprova."
 errnovc = "Non sono connesso ad alcun canale vocale!"
 erruvc = "Non sei connesso a nessun canale vocale!\nEntra in un canale vocale e riprova."
 errnoarg = "Non hai specificato uno o più argomenti necessari per eseguire questo comando!"
