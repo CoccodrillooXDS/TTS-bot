@@ -37,7 +37,7 @@ bot = bridge.Bot(
     activity=discord.Game(name="Loading..."),
 )
 
-bot_version = "v3.5.0"
+bot_version = "v3.5.1"
 
 # --------------------------------------------------
 # Folders
@@ -1293,16 +1293,15 @@ async def check_update():
                                 await guild.get_channel(guild.system_channel.id).send(embed=embed)
                             else:
                                 await guild.get_channel(int(config['DEFAULT']['updateschannel'])).send(embed=embed)
-                        except AttributeError:
-                            for channel in guild.text_channels:
-                                if channel.permissions_for(guild.me).send_messages:
-                                    await channel.send(embed=embed)
-                                    break
-                        except ValueError:
-                            for channel in guild.text_channels:
-                                if channel.permissions_for(guild.me).send_messages:
-                                    await channel.send(embed=embed)
-                                    break
+                        except:
+                            try:
+                                for channel in guild.text_channels:
+                                    if channel.permissions_for(guild.me).send_messages:
+                                        await channel.send(embed=embed)
+                                        break
+                            except:
+                                pass
+                        
         elif r.status_code == 403:
             print("-> Unable to check for bot updates! We have been rate limited by GitHub, checking for updates later...")
     except Exception as e:
