@@ -37,7 +37,7 @@ bot = bridge.Bot(
     activity=discord.Game(name="Loading..."),
 )
 
-bot_version = "v3.4.1"
+bot_version = "v3.5.0"
 
 # --------------------------------------------------
 # Folders
@@ -56,7 +56,7 @@ supported_languages_message = ""
 lang_list = []
 allroles = []
 installed_langs = []
-conf = {'role': 'TTS', 'lang': 'en', 'autosaychan': '[]', 'defvoice': 'en', 'silenceupdates': 'False', 'updateschannel': 'system', 'multiuser': 'True'}
+conf = {'role': 'TTS', 'lang': 'en', 'autosaychan': '[]', 'defvoice': 'en', 'silenceupdates': 'False', 'updateschannel': 'system', 'multiuser': 'True', 'usenicknames': 'False'}
 punctuation = ['!', '"', '#', '$', '%', '&', "'", '*', '+', '-', '.', ',', ':', ';', '=', '?', '[', ']', '^', '_', '|', '~']
 
 TOKEN = ""
@@ -379,6 +379,7 @@ async def _say(ctx, *, args=None):
     config = configparser.ConfigParser()
     author = ctx.author.id
     authorname = ctx.author.name
+    authornick = ctx.author.display_name
     if not args:
         embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'errnoarg')), color=0xFF0000)
         await ctx.respond(embed=embed, delete_after=5)
@@ -448,7 +449,10 @@ async def _say(ctx, *, args=None):
         if len(users) > 1:
             config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
             if config['DEFAULT']['multiuser'] == "True":
-                texta = f"{authorname}: {texta}"
+                if config['DEFAULT']['usenicknames'] == "True":
+                    texta = f"{authornick}: {texta}"
+                else:
+                    texta = f"{authorname}: {texta}"
     else:
         users.append(author)
         with open(os.path.join(temp, str(ctx.guild.id), ".users"), "wb") as f:
@@ -479,6 +483,7 @@ async def say(ctx, lang: Option(str, "Choose a language", autocomplete=showlangs
     config = configparser.ConfigParser()
     author = ctx.author.id
     authorname = ctx.author.name
+    authornick = ctx.author.display_name
     lang = lang.lower()
     texta = text.lower()
     if not lang in lang_list:
@@ -539,7 +544,10 @@ async def say(ctx, lang: Option(str, "Choose a language", autocomplete=showlangs
         if len(users) > 1:
             config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
             if config['DEFAULT']['multiuser'] == "True":
-                texta = f"{authorname}: {texta}"
+                if config['DEFAULT']['usenicknames'] == "True":
+                    texta = f"{authornick}: {texta}"
+                else:
+                    texta = f"{authorname}: {texta}"
     else:
         users.append(author)
         with open(os.path.join(temp, str(ctx.guild.id), ".users"), "wb") as f:
@@ -568,6 +576,7 @@ async def hidsay(ctx, lang, text):
     config = configparser.ConfigParser()
     author = ctx.author.id
     authorname = ctx.author.name
+    authornick = ctx.author.display_name
     lang = lang.lower()
     texta = text.lower()
     if not lang in lang_list:
@@ -632,7 +641,10 @@ async def hidsay(ctx, lang, text):
         if len(users) > 1:
             config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
             if config['DEFAULT']['multiuser'] == "True":
-                texta = f"{authorname}: {texta}"
+                if config['DEFAULT']['usenicknames'] == "True":
+                    texta = f"{authornick}: {texta}"
+                else:
+                    texta = f"{authorname}: {texta}"
     else:
         users.append(author)
         with open(os.path.join(temp, str(ctx.guild.id), ".users"), "wb") as f:
@@ -835,6 +847,11 @@ async def _settings(ctx, context):
     else:
         if config["DEFAULT"]["multiuser"] == "False":
             mus = eval("f" + get_guild_language(ctx, 'disabled'))
+    if config["DEFAULT"]["usenicknames"] == "True":
+        un = eval("f" + get_guild_language(ctx, 'enabled'))
+    else:
+        if config["DEFAULT"]["usenicknames"] == "False":
+            un = eval("f" + get_guild_language(ctx, 'disabled'))
     usci = 0
     if config["DEFAULT"]["updateschannel"] == "system" or config["DEFAULT"]["updateschannel"] == "":
         try:
@@ -857,6 +874,7 @@ async def _settings(ctx, context):
     buttonchangeupdatechannel = Button(custom_id="cuc", label=eval("f" + get_guild_language(ctx, 'changeupdatechannel')), style=discord.ButtonStyle.secondary, emoji="🗣️")
     buttonsilenceupdates = Button(custom_id="su", label=eval("f" + get_guild_language(ctx, 'silenceupdates')), style=discord.ButtonStyle.secondary, emoji="🔇")
     buttonmultiuser = Button(custom_id="mu", label=eval("f" + get_guild_language(ctx, 'multiuser')), style=discord.ButtonStyle.secondary, emoji="👥")
+    buttonusenicknames = Button(custom_id="un", label=eval("f" + get_guild_language(ctx, 'usenicknames')), style=discord.ButtonStyle.secondary, emoji="🏷️")
     view = View()
     view.add_item(buttonchangerole)
     view.add_item(buttonchangelanguage)
@@ -865,6 +883,7 @@ async def _settings(ctx, context):
     view.add_item(buttonchangeupdatechannel)
     view.add_item(buttonsilenceupdates)
     view.add_item(buttonmultiuser)
+    view.add_item(buttonusenicknames)
     view.add_item(buttonclose)
     await ctx.respond(embed=embed, view=view, delete_after=20)
     async def defvoice(ctx):
@@ -1208,6 +1227,22 @@ async def _settings(ctx, context):
         await ctx.response.send_message(embed=embed, delete_after=3)
         await _settings(context, context)
     buttonmultiuser.callback = multiuser
+    async def usenicknames(ctx):
+        config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
+        if config["DEFAULT"]["usenicknames"] == "True":
+            config.set('DEFAULT', 'usenicknames', "False")
+            embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), description=eval("f" + get_guild_language(ctx, 'usingusernames')), color=0x1eff00)
+        else:
+            config.set('DEFAULT', 'usenicknames', "True")
+            embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), description=eval("f" + get_guild_language(ctx, 'usingnicknames')), color=0x1eff00)
+        with open(os.path.join(configs, str(ctx.guild.id)), 'w') as configfile:
+            config.write(configfile)
+        if use_ibm:
+            upload_configs()
+        await ctx.message.delete()
+        await ctx.response.send_message(embed=embed, delete_after=3)
+        await _settings(context, context)
+    buttonusenicknames.callback = usenicknames
 
 
 # --------------------------------------------------
