@@ -5,9 +5,7 @@
 <a href="https://python.org/downloads/"><img src="https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue?style=for-the-badge&logo=python&logoColor=lightblue&color=red" alt="Python 3.8, 3.9, 3.10">
 </a> <a href="https://github.com/CoccodrillooXDS/TTS-bot/releases/latest"><img src="https://img.shields.io/github/v/release/CoccodrillooXDS/TTS-bot?include_prereleases&style=for-the-badge&logo=github" alt="Latest Release"></p>
 <p align="center">
-<a href="https://discord.com/api/oauth2/authorize?client_id=832158681671532564&permissions=8&scope=applications.commands%20bot"><img src="https://img.shields.io/badge/Discord-Add%20bot%20to%20your%20server-yellow?style=for-the-badge&logo=discord&logoColor=lightblue&color=blue" alt="Add bot to your server"></p>
-<p align="center">
-<a href="https://heroku.com/deploy"><img src="https://www.herokucdn.com/deploy/button.svg" alt="Deploy to Heroku"></a></p>
+<a href="https://discord.com/api/oauth2/authorize?client_id=832158681671532564&permissions=8&scope=applications.commands%20bot"><img src="https://img.shields.io/badge/Discord-Add%20bot%20to%20your%20server-yellow?style=for-the-badge&logo=discord&logoColor=lightblue&color=blue" alt="Add bot to your server"></a></p>
 
 # **Overview**
 
@@ -18,7 +16,7 @@ TTS is a **Text-to-Speech** bot for Discord. It uses the **[gTTS](https://pypi.o
 * Give your text a voice!
 * Read your text aloud!
 * Run on any platform!
-* Easily self-hostable on any server (even on [Heroku](https://www.heroku.com))!
+* Easily self-hostable on any server!
 * Easy to use!
 * It's free!
 
@@ -30,9 +28,7 @@ TTS is a **Text-to-Speech** bot for Discord. It uses the **[gTTS](https://pypi.o
 
 (It may work on MacOS, but I haven't tested it)
 
-# **Choose how you want to host the bot**
-
-You can choose to host the bot on your own server or on [Heroku](https://www.heroku.com) for free.
+# **Hosting the bot**
 
 Check out the [Wiki](https://github.com/CoccodrillooXDS/TTS-bot/wiki) to see how to host the bot.
 
