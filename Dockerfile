@@ -1,6 +1,6 @@
 FROM python:3
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt update && apt upgrade
+RUN apt update && apt upgrade -y
 RUN apt install -y ffmpeg git libffi-dev
 RUN mkdir app
 WORKDIR app
