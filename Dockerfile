@@ -1,4 +1,4 @@
-FROM arm32v7/python:3
+FROM python:3
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update && apt upgrade -y
 RUN apt install -y ffmpeg git libffi-dev
