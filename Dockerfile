@@ -1,4 +1,4 @@
-FROM python:3
+FROM python:3.10-bullseye
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update && apt upgrade -y
 RUN apt install -y ffmpeg git libffi-dev
