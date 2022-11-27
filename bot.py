@@ -283,21 +283,26 @@ async def check_update():
                         config = configparser.ConfigParser()
                         config.read(os.path.join(configs, str(guild.id)), encoding='utf-8')
                         if config['DEFAULT']['silenceupdates'] == "True":
-                            break
+                            print(f"!> Update message not sent to {guild.name} ({guild.id}). Updates have been silenced")
+                            continue
                         embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'updatetitle')), description=eval("f" + get_guild_language(ctx, 'updatedesc')), color=0x286fad)
                         try:
                             if config['DEFAULT']['updateschannel'] == "system":
                                 await guild.get_channel(guild.system_channel.id).send(embed=embed)
+                                print(f">> Update message sent to {guild.name} ({guild.id}) in system channel {guild.system_channel.name}.")
                             else:
                                 await guild.get_channel(int(config['DEFAULT']['updateschannel'])).send(embed=embed)
+                                print(f">> Update message sent to {guild.name} ({guild.id}) in {guild.get_channel(int(config['DEFAULT']['updateschannel'])).name}.")
                         except:
                             try:
                                 for channel in guild.text_channels:
                                     if channel.permissions_for(guild.me).send_messages:
                                         await channel.send(embed=embed)
+                                        print(f">> Update message sent to {guild.name} ({guild.id}) in {channel.name}. << Unable to find the channel specified in the config file.")
                                         break
                             except:
-                                pass
+                                print(f"!> Update message not sent to {guild.name} ({guild.id}). << Unable to find a channel where I can send messages.")
+                                continue
                         
         elif r.status_code == 403:
             print("-> Unable to check for bot updates!")
