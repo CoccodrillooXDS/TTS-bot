@@ -18,7 +18,7 @@ import ibm_boto3
 import pickle
 from ibm_botocore.client import Config, ClientError
 from discord.commands import Option
-from discord.ext import commands, tasks, bridge
+from discord.ext import commands, tasks
 from discord.ui import Button, InputText, Modal, Select, View
 from gtts import gTTS, lang, gTTSError
 
@@ -29,7 +29,7 @@ if os.name == 'nt':
 intents = discord.Intents.default()
 intents.message_content = True
 
-bot = bridge.Bot(
+bot = discord.Bot(
     command_prefix=commands.when_mentioned_or('>'),
     description="A bot to convert text to speech in a voice channel using Google TTS APIs.",
     intents=intents,
@@ -37,7 +37,7 @@ bot = bridge.Bot(
     activity=discord.Game(name="Loading..."),
 )
 
-bot_version = "v3.5.1"
+bot_version = "v3.6.0"
 
 # --------------------------------------------------
 # Folders
@@ -361,7 +361,7 @@ def delete_config(item):
 # Languages available
 # --------------------------------------------------
 
-@bot.bridge_command(name="langs", description="List all available languages")
+@bot.command(name="langs", description="List all available languages")
 async def langs(ctx):
     global supported_languages_message
     """ List all available languages """
@@ -371,109 +371,6 @@ async def langs(ctx):
 # --------------------------------------------------
 # Convert text to speech and play it in the voice channel
 # --------------------------------------------------
-
-@bot.command(name="say", description="Convert text to speech", default_permissions=False)
-@commands.check(check_role)
-async def _say(ctx, *, args=None):
-    global temp
-    config = configparser.ConfigParser()
-    author = ctx.author.id
-    authorname = ctx.author.name
-    authornick = ctx.author.display_name
-    if not args:
-        embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'errnoarg')), color=0xFF0000)
-        await ctx.respond(embed=embed, delete_after=5)
-        return False
-    lang = args[0:2]
-    lang = lang.lower()
-    text = args[3:]
-    texta = text.lower()
-    if not lang in lang_list:
-        config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
-        lang = config['DEFAULT']['defvoice']
-    if "gg" in texta and "it" in lang:
-        texta = re.sub(r"\bgg\b", "g g", texta)
-    texta = "".join(texta)
-    if texta == "" or texta.isspace():
-        embed = discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'errnoarg')), color=0xFF0000)
-        await ctx.respond(embed=embed, delete_after=5)
-        return
-    user = re.findall(r"<@!?(\d+)>", texta)
-    if user:
-        for x in user:
-            try:
-                u = await bot.fetch_user(int(x))
-            except:
-                texta = re.sub(r"<@!?({})>".format(x), "Invalid User", texta)
-                continue
-            texta = re.sub(r"<@!?({})>".format(x), u.name, texta)           
-    chann = re.findall(r"<#(\d+)>", texta)
-    if chann:
-        for x in chann:
-            try:
-                c = await bot.fetch_channel(int(x))
-            except:
-                texta = re.sub(r"<#({})>".format(x), "Invalid Channel", texta)
-                continue
-            texta = re.sub(r"<#({})>".format(x), c.name, texta)
-    role = re.findall(r"<@&(\d+)>", texta)
-    if role:
-        for x in role:
-            try:
-                r = ctx.guild.get_role(int(x))
-            except:
-                texta = re.sub(r"<@&({})>".format(x), "Invalid Role", texta)
-                continue
-            texta = re.sub(r"<@&({})>".format(x), r.name, texta)
-    texta = re.sub(r"<\/(\w+):(\d+)>", r"\1", texta)
-    texta = re.sub(r"<a?:(\w+):(\d+)>", r"\1", texta)
-    texta = re.sub(r"<:(\w+):(\d+)>", r"\1", texta)
-    time1 = re.findall(r"<t:(\d+)>", texta)
-    if time1:
-        for x in time1:
-            t = datetime.datetime.fromtimestamp(int(x))
-            texta = re.sub(r"<t:({})>".format(x), t.strftime("%A %d %B %Y, %H:%M:%S"), texta)
-    time2 = re.findall(r"<t:(\d+):(\w+)>", texta)
-    if time2:
-        for x in time2:
-            t = datetime.datetime.fromtimestamp(int(x[0]))
-            texta = re.sub(r"<t:({}):({})>".format(x[0], x[1]), t.strftime("%A %d %B %Y, %H:%M:%S"), texta)
-    users = []
-    if os.path.isfile(os.path.join(temp, str(ctx.guild.id), ".users")):
-        with open(os.path.join(temp, str(ctx.guild.id), ".users"), "rb") as f:
-            users = pickle.load(f)
-        if not author in users:
-            users.append(author)
-            with open(os.path.join(temp, str(ctx.guild.id), ".users"), "wb") as f:
-                pickle.dump(users, f)
-        if len(users) > 1:
-            config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
-            if config['DEFAULT']['multiuser'] == "True":
-                if config['DEFAULT']['usenicknames'] == "True":
-                    texta = f"{authornick}: {texta}"
-                else:
-                    texta = f"{authorname}: {texta}"
-    else:
-        users.append(author)
-        with open(os.path.join(temp, str(ctx.guild.id), ".users"), "wb") as f:
-            pickle.dump(users, f)
-    tts = gTTS(texta, lang=lang)
-    if os.name == 'nt':
-        source = f"{temp}\{ctx.guild.id}\{ran()}.mp3"
-    else:
-        source = f"{temp}/{ctx.guild.id}/{ran()}.mp3"
-    try:
-        tts.save(source)
-    except gTTSError:
-        code = generate_random_code()
-        e = traceback.format_exc()
-        print(e + "Error Code: " + code)
-        embed = discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'unexpectederror')), color=0xFF0000)
-        await ctx.respond(embed=embed, delete_after=5)
-        return
-    if await preplay(ctx, source):
-        embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), description=eval("f" + get_guild_language(ctx, 'saylangmess')), color=0x1eff00)
-        await ctx.send(embed=embed, delete_after=1)
 
 @bot.slash_command(name="say", description="Convert text to speech", default_permissions=False)
 @commands.check(check_role)
@@ -671,12 +568,12 @@ async def hidsay(ctx, lang, text):
 # Disconnect the bot from the voice channel
 # --------------------------------------------------
 
-@bot.bridge_command(name="stop", description="Disconnect the bot from current channel", default_permissions=False)
+@bot.slash_command(name="stop", description="Disconnect the bot from current channel", default_permissions=False)
 @commands.check(check_role)
 async def _stop(ctx):
     await stop(ctx)
 
-@bot.bridge_command(name="disconnect", description="Disconnect the bot from current channel", default_permissions=False)
+@bot.slash_command(name="disconnect", description="Disconnect the bot from current channel", default_permissions=False)
 @commands.check(check_role)
 async def disconnect(ctx):
     await stop(ctx)
@@ -727,7 +624,7 @@ async def help(ctx):
 # About command
 # --------------------------------------------------
 
-@bot.bridge_command(name="about", description="About the bot")
+@bot.slash_command(name="about", description="About the bot")
 async def about(ctx):
     global bot_version, punctuation
     punct = ' '.join(map(str, punctuation))
@@ -812,14 +709,14 @@ class setrole(Modal):
             upload_configs()
         await interaction.response.send_message(embed=embed, delete_after=3, ephemeral=True)
 
-@bot.bridge_command(name="settings", description="Edit bot configuration", default_permissions=False)
+@bot.slash_command(name="settings", description="Edit bot configuration", default_permissions=False)
 @commands.check(check_role)
 async def settings(ctx):
     context = ctx
     await ctx.defer()
     await _settings(ctx, context)
 
-@bot.bridge_command(name="config", description="Edit bot configuration", default_permissions=False)
+@bot.slash_command(name="config", description="Edit bot configuration", default_permissions=False)
 @commands.check(check_role)
 async def config(ctx):
     context = ctx
@@ -1249,72 +1146,13 @@ async def _settings(ctx, context):
 # Tasks
 # --------------------------------------------------
 
-@tasks.loop(seconds=1800)
-async def check_update():
-    try:
-        r = requests.get('https://api.github.com/repos/CoccodrillooXDS/TTS-bot/releases/latest')
-        if r.status_code == 200:
-            with open(os.path.join(root, 'version.ini'), 'r') as f:
-                    version = f.read()
-            if int(version) > r.json()['id'] and bot_version != r.json()['tag_name']:
-                print(f"-> Bot version ({bot_version}) is newer than the latest version ({r.json()['tag_name']})")
-                return
-            if bot_version != r.json()['tag_name'] and int(version) == r.json()['id']:
-                print(f"-> Bot version ({bot_version}) is newer than the latest version ({r.json()['tag_name']})")
-                return
-            if r.json()['tag_name'] != bot_version:
-                print(f"-> New version {r.json()['tag_name']} available!")
-            if int(version) != r.json()['id'] and bot_version == r.json()['tag_name']:
-                changelog = r.json()['body']
-                id = r.json()['id']
-                with open(os.path.join(root,'version.ini'), 'w') as versionfile:
-                    versionfile.write(str(id))
-                if use_ibm:
-                    upload_version()
-                silent = False
-                for attachment in r.json()['assets']:
-                    if attachment['name'] == "silent":
-                        silent = True
-                        break
-                if silent:
-                    print(f"-> A new silent version ({bot_version}) has been installed successfully!")
-                    return
-                else:
-                    print(f"-> A new version ({bot_version}) has been installed successfully!")
-                    for guild in bot.guilds:
-                        ctx = guild
-                        config = configparser.ConfigParser()
-                        config.read(os.path.join(configs, str(guild.id)), encoding='utf-8')
-                        if config['DEFAULT']['silenceupdates'] == "True":
-                            break
-                        embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'updatetitle')), description=eval("f" + get_guild_language(ctx, 'updatedesc')), color=0x286fad)
-                        try:
-                            if config['DEFAULT']['updateschannel'] == "system":
-                                await guild.get_channel(guild.system_channel.id).send(embed=embed)
-                            else:
-                                await guild.get_channel(int(config['DEFAULT']['updateschannel'])).send(embed=embed)
-                        except:
-                            try:
-                                for channel in guild.text_channels:
-                                    if channel.permissions_for(guild.me).send_messages:
-                                        await channel.send(embed=embed)
-                                        break
-                            except:
-                                pass
-                        
-        elif r.status_code == 403:
-            print("-> Unable to check for bot updates! We have been rate limited by GitHub, checking for updates later...")
-    except Exception as e:
-        print("-> An error occurred while checking for bot updates!")
-        print(logging.error(traceback.format_exc()))
-
 @tasks.loop(seconds=300)
 async def check_timer(bot):
     for guild in bot.guilds:
         config = configparser.ConfigParser()
         if os.path.exists(os.path.join(temp, str(guild.id),'.clock')):
             config.read(os.path.join(temp, str(guild.id),'.clock'), encoding='utf-8')
-            if time.time() - float(config['DEFAULT']['time']) >= 240:
+            if time.time() - float(config['DEFAULT']['time']) >= 900:
                 if guild.voice_client is not None:
                     try:
                         await guild.voice_client.disconnect()
@@ -1359,10 +1197,6 @@ async def on_ready():
                     f.write("0")
     if use_ibm:
         upload_version()
-    try:
-        check_update.start()
-    except:
-        pass
     langs = lang.tts_langs()
     for i in langs:
         if "zh-CN" in i:
@@ -1453,13 +1287,6 @@ async def on_message(message):
         a = []
     if int(message.channel.id) in a:
         if message.author.bot:
-            return
-        if message.content.startswith('>'):
-            await bot.process_commands(message)
-            embwarning=discord.Embed(description=eval(get_guild_language(ctx, 'warningmsg')), color=0xfcba03)
-            view = View()
-            view.add_item(Button(style=discord.ButtonStyle.link, label=eval("f" + get_guild_language(ctx, 'learnmore')), url="https://support.discord.com/hc/en-us/articles/1500000368501-Slash-Commands-FAQ"))
-            await ctx.send(embed=embwarning, view=view, delete_after=3)
             return
         voice = config['DEFAULT']['defvoice']
         if message.content.startswith(tuple(punctuation)):
