@@ -1,7 +1,7 @@
 FROM python:3
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update && apt upgrade -y
-RUN apt install -y ffmpeg git libffi-dev python3-nacl
+RUN apt install -y ffmpeg git libffi-dev
 RUN mkdir app
 WORKDIR app
 RUN git clone https://github.com/CoccodrillooXDS/TTS-bot.git .
