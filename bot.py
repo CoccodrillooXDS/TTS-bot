@@ -18,7 +18,7 @@ import ibm_boto3
 import pickle
 from ibm_botocore.client import Config, ClientError
 from discord.commands import Option
-from discord.ext import commands, tasks
+from discord.ext import commands, tasks, bridge
 from discord.ui import Button, InputText, Modal, Select, View
 from gtts import gTTS, lang, gTTSError
 
@@ -29,7 +29,7 @@ if os.name == 'nt':
 intents = discord.Intents.default()
 intents.message_content = True
 
-bot = discord.Bot(
+bot = bridge.Bot(
     command_prefix=commands.when_mentioned_or('>'),
     description="A bot to convert text to speech in a voice channel using Google TTS APIs.",
     intents=intents,
