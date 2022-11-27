@@ -4,4 +4,3 @@ PyNaCl
 gtts
 asyncio
 nest_asyncio
-ibm-cos-sdk

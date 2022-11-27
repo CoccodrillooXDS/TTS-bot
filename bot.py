@@ -14,9 +14,7 @@ import traceback
 import discord
 import nest_asyncio
 import requests
-import ibm_boto3
 import pickle
-from ibm_botocore.client import Config, ClientError
 from discord.commands import Option
 from discord.ext import commands, tasks, bridge
 from discord.ui import Button, InputText, Modal, Select, View
@@ -60,8 +58,6 @@ conf = {'role': 'TTS', 'lang': 'en', 'autosaychan': '[]', 'defvoice': 'en', 'sil
 punctuation = ['!', '"', '#', '$', '%', '&', "'", '*', '+', '-', '.', ',', ':', ';', '=', '?', '[', ']', '^', '_', '|', '~']
 
 TOKEN = ""
-
-use_ibm = False
 
 # --------------------------------------------------
 # Internal functions
@@ -272,8 +268,6 @@ async def check_update():
                 id = r.json()['id']
                 with open(os.path.join(root,'version.ini'), 'w') as versionfile:
                     versionfile.write(str(id))
-                if use_ibm:
-                    upload_version()
                 silent = False
                 for attachment in r.json()['assets']:
                     if attachment['name'] == "silent":
@@ -310,110 +304,6 @@ async def check_update():
     except Exception as e:
         print("-> An error occurred while checking for bot updates!")
         print(logging.error(traceback.format_exc()))
-
-# --------------------------------------------------
-# IBM Cloud Internal functions
-# --------------------------------------------------
-
-def create_bucket():
-    global use_ibm, bucket_name
-    print(f"Creating a new bucket called: {bucket_name}")
-    try:
-        cos.Bucket(bucket_name).create(
-            CreateBucketConfiguration={
-                "LocationConstraint": 'eu-de-flex'
-            }
-        )
-        print(f"Bucket: {bucket_name} created!")
-    except ClientError as be:
-        print("IBM CLIENT ERROR: {0}\n".format(be))
-        use_ibm = False
-    except Exception as e:
-        print("Unable to create bucket: {0}".format(e))
-        use_ibm = False
-
-def get_bucket():
-    global bucket_name, use_ibm
-    print("Loading buckets...")
-    try:
-        buckets = cos.buckets.all()
-        for bucket in buckets:
-            if bucket.name == bucket_name:
-                print(f"Bucket: {bucket_name} found!")
-                return True
-        return False
-    except ClientError as be:
-        print("IBM CLIENT ERROR: {0}\n".format(be))
-        use_ibm = False
-    except Exception as e:
-        print("Unable to retrieve the list of buckets: {0}".format(e))
-        use_ibm = False
-
-def upload_version():
-    global bucket_name, root, use_ibm
-    upload_version = os.path.join(root, 'version.ini')
-    object_name = 'version.ini'
-    try:
-        cos.Object(bucket_name, object_name).upload_file(upload_version)
-    except ClientError as be:
-        print("IBM CLIENT ERROR: {0}\n".format(be))
-    except Exception as e:
-        print("Unable to upload {0}: {1}".format(object_name, e))
-
-def download_version():
-    global bucket_name, root, use_ibm
-    object_name = 'version.ini'
-    download_version = os.path.join(root, 'version.ini')
-    try:
-        files = cos.Bucket(bucket_name).objects.all()
-        for file in files:
-            if file.key == object_name:
-                cos.Object(bucket_name, object_name).download_file(download_version)
-    except ClientError as be:
-        print("IBM CLIENT ERROR: {0}\n".format(be))
-    except Exception as e:
-        print("Unable to download {0}: {1}".format(object_name, e))
-
-def upload_configs():
-    global bucket_name, use_ibm, configs
-    local_upload_directory = configs
-    remote_dir = 'configs'
-    for root, dirs, files in os.walk(local_upload_directory):
-        for file in files:
-            local_file = os.path.join(root, file)
-            remote_file = remote_dir + "\\" + file
-            try:
-                cos.Object(bucket_name, remote_file).upload_file(local_file)
-            except ClientError as be:
-                print("IBM CLIENT ERROR: {0}\n".format(be))
-            except Exception as e:
-                print("Unable to upload {0}: {1}".format(remote_file, e))
-
-def download_configs():
-    global bucket_name, use_ibm, configs
-    remote_dir = 'configs'
-    try:
-        files = cos.Bucket(bucket_name).objects.all()
-        for file in files:
-            if file.key.startswith(remote_dir):
-                remote_file = file.key
-                local_file = os.path.join(configs, file.key[len(remote_dir)+1:])
-                cos.Object(bucket_name, file.key).download_file(local_file)
-    except ClientError as be:
-        print("IBM CLIENT ERROR: {0}\n".format(be))
-    except Exception as e:
-        print("Unable to download {0}: {1}".format(remote_file, e))
-
-def delete_config(item):
-    global bucket_name, use_ibm
-    item = f"configs\\{item}"
-    try:
-        cos.Object(bucket_name, item).delete()
-        print(f"Configuration for {item} deleted!")
-    except ClientError as be:
-        print("IBM CLIENT ERROR: {0}\n".format(be))
-    except Exception as e:
-        print("Unable to delete object: {0}".format(e))
 
 # --------------------------------------------------
 # Languages available
@@ -763,8 +653,6 @@ class setrole(Modal):
         config['DEFAULT']['role'] = self.children[0].value
         with open(os.path.join(configs, str(interaction.guild.id)), 'w') as configfile:
             config.write(configfile)
-        if use_ibm:
-            upload_configs()
         await interaction.response.send_message(embed=embed, delete_after=3, ephemeral=True)
 
 @bot.slash_command(name="settings", description="Edit bot configuration", default_permissions=False)
@@ -890,8 +778,6 @@ async def _settings(ctx, context):
                 pass
             with open(os.path.join(configs, str(ctx.guild.id)), 'w') as configfile:
                 config.write(configfile)
-            if use_ibm:
-                upload_configs()
             embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), color=0x1eff00)
             await ctx.message.delete()
             await ctx.response.send_message(embed=embed, delete_after=1)
@@ -1006,8 +892,6 @@ async def _settings(ctx, context):
             config.set('DEFAULT', 'autosaychan', str(channels))
             with open(os.path.join(configs, str(ctx.guild.id)), 'w') as configfile:
                 config.write(configfile)
-            if use_ibm:
-                upload_configs()
             embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), color=0x1eff00)
             await ctx.message.delete()
             await ctx.response.send_message(embed=embed, delete_after=1)
@@ -1018,8 +902,6 @@ async def _settings(ctx, context):
             config.set('DEFAULT', 'autosaychan', str(channels))
             with open(os.path.join(configs, str(ctx.guild.id)), 'w') as configfile:
                 config.write(configfile)
-            if use_ibm:
-                upload_configs()
             embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'disabledautosay')), color=0xe32222)
             await ctx.message.delete()
             await ctx.response.send_message(embed=embed, delete_after=3)
@@ -1059,8 +941,6 @@ async def _settings(ctx, context):
                 config.write(configfile)
             embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), description=eval("f" + get_guild_language(ctx, 'changedlang')), color=0x1eff00)
             await ctx.response.edit_message(embed=embed, view=None)
-            if use_ibm:
-                upload_configs()
             await _settings(context, context)
         select.callback = callback
     buttonchangelanguage.callback = changelanguage
@@ -1125,8 +1005,6 @@ async def _settings(ctx, context):
                 pass
             with open(os.path.join(configs, str(ctx.guild.id)), 'w') as configfile:
                 config.write(configfile)
-            if use_ibm:
-                upload_configs()
             embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), color=0x1eff00)
             await ctx.message.delete()
             await ctx.response.send_message(embed=embed, delete_after=1)
@@ -1160,8 +1038,6 @@ async def _settings(ctx, context):
             embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), description=eval("f" + get_guild_language(ctx, 'silencedupdates')), color=0x1eff00)
         with open(os.path.join(configs, str(ctx.guild.id)), 'w') as configfile:
             config.write(configfile)
-        if use_ibm:
-            upload_configs()
         await ctx.message.delete()
         await ctx.response.send_message(embed=embed, delete_after=1)
         await _settings(context, context)
@@ -1176,8 +1052,6 @@ async def _settings(ctx, context):
             embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), description=eval("f" + get_guild_language(ctx, 'multiusermsg')), color=0x1eff00)
         with open(os.path.join(configs, str(ctx.guild.id)), 'w') as configfile:
             config.write(configfile)
-        if use_ibm:
-            upload_configs()
         await ctx.message.delete()
         await ctx.response.send_message(embed=embed, delete_after=3)
         await _settings(context, context)
@@ -1192,8 +1066,6 @@ async def _settings(ctx, context):
             embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), description=eval("f" + get_guild_language(ctx, 'usingnicknames')), color=0x1eff00)
         with open(os.path.join(configs, str(ctx.guild.id)), 'w') as configfile:
             config.write(configfile)
-        if use_ibm:
-            upload_configs()
         await ctx.message.delete()
         await ctx.response.send_message(embed=embed, delete_after=3)
         await _settings(context, context)
@@ -1227,25 +1099,15 @@ async def check_timer(bot):
 
 @bot.event
 async def on_ready():
-    global supported_languages_message, lang_list, use_ibm, conf
+    global supported_languages_message, lang_list, conf
     n = 5
     an = 1
     print(f"{bot.user} is finishing up loading...")
     guilds = []
     for guild in bot.guilds:
         guilds.append(f"{guild.id}")
-    if use_ibm:
-        print(f"Getting bucket infos from IBM...")
-        if not get_bucket():
-            if use_ibm:
-                create_bucket()
-            else:
-                print(f"-> IBM credentials are invalid, skipping sync...")
-                use_ibm = False
     print(f"Checking for updates... (Step {str(an)}/{str(n)})")
     await check_update()
-    if use_ibm:
-        download_version()
     if not os.path.exists(os.path.join(root,'version.ini')):
         with open(os.path.join(root,'version.ini'), 'w') as f:
             f.write("0")
@@ -1254,8 +1116,6 @@ async def on_ready():
             if f.read() == "":
                 with open(os.path.join(root,'version.ini'), 'w') as f:
                     f.write("0")
-    if use_ibm:
-        upload_version()
     langs = lang.tts_langs()
     for i in langs:
         if "zh-CN" in i:
@@ -1290,8 +1150,6 @@ async def on_ready():
     print(f"Directories created (Step {str(an)}/{str(n)})")
     an += 1
     print(f"Loading guild configs... (Step {str(an)}/{str(n)})")
-    if use_ibm:
-        download_configs()
     for guild in bot.guilds:
         if not os.path.exists(os.path.join(configs, str(guild.id))):
             config = configparser.ConfigParser()
@@ -1310,8 +1168,6 @@ async def on_ready():
                     config['DEFAULT'][key] = conf[key]
                 with open(os.path.join(configs, str(guild.id)), 'w') as configfile:
                     config.write(configfile)
-    if use_ibm:
-        upload_configs()
     print(f"Guild configs loaded (Step {str(an)}/{str(n)})")
     an += 1
     print(f"Checking if all servers have the role specified in config... (Step {str(an)}/{str(n)})")
@@ -1385,8 +1241,6 @@ async def on_guild_join(guild):
             config.write(configfile)
     print(f"New guild joined: {guild.name} ({guild.id})")
     await bot.change_presence(activity=discord.Game(name=f"/help | {len(bot.guilds)} servers"))
-    if use_ibm:
-        upload_configs()
 
 @bot.event
 async def on_guild_remove(guild):
@@ -1394,8 +1248,6 @@ async def on_guild_remove(guild):
     shutil.rmtree(os.path.join(temp, str(guild.id)))
     os.remove(os.path.join(configs, str(guild.id)))
     await bot.change_presence(activity=discord.Game(name=f"/help | {len(bot.guilds)} servers"))
-    if use_ibm:
-        delete_config(str(guild.id))
     print(f"{guild.name} ({guild.id}) removed")
 
 @bot.event
@@ -1428,31 +1280,6 @@ if os.environ.get('TOKEN') is None:
     exit()
 else:
     TOKEN = os.environ.get('TOKEN')
-
-if os.environ.get('COS_ENDPOINT') is None or os.environ.get('COS_API_KEY_ID') is None or os.environ.get('COS_INSTANCE_CRN') is None:
-    print("COS_ENDPOINT, COS_API_KEY_ID or COS_INSTANCE_CRN not found in environment variables")
-    print("You have to set them to use the IBM Cloud Object Storage.")
-    print("You can get them from https://cloud.ibm.com/docs/cloud-object-storage/getting-started.html")
-    print("NOTE: If you use Heroku to host this bot, you need to set these variables because Heroku will REMOVE ALL DATA (including Server Configurations) on bot restart.")
-    use_ibm = False
-else:
-    use_ibm = True
-    COS_ENDPOINT = os.environ.get('COS_ENDPOINT')
-    COS_API_KEY_ID = os.environ.get('COS_API_KEY_ID')
-    COS_INSTANCE_CRN = os.environ.get('COS_INSTANCE_CRN')
-    bucket_name = "tts-bot-data"
-    try:
-        cos = ibm_boto3.resource("s3", ibm_api_key_id=COS_API_KEY_ID, ibm_service_instance_id=COS_INSTANCE_CRN, config=Config(signature_version="oauth"), endpoint_url=COS_ENDPOINT)
-    except Exception as e:
-        print(e)
-        print("\nCould not connect to IBM Cloud Object Storage. Please check your credentials.")
-        print("NOTE: If you use Heroku to host this bot, you need to set these variables because Heroku will REMOVE ALL DATA (including Server Configurations) on bot restart.")
-        print("\nLoading the bot without IBM Cloud in 5 seconds...\n")
-        use_ibm = False
-        try:
-            time.sleep(5)
-        except KeyboardInterrupt:
-            exit()
 
 bot.help_command = Help()
 
