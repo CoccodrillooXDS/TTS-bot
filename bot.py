@@ -258,7 +258,7 @@ async def check_update():
         r = requests.get('https://api.github.com/repos/CoccodrillooXDS/TTS-bot/releases/latest')
         if r.status_code == 200:
             with open(os.path.join(root, 'version.ini'), 'r') as f:
-                    version = f.read()
+                version = f.read()
             if int(version) > r.json()['id'] and bot_version != r.json()['tag_name']:
                 print(f"-> Bot version ({bot_version}) is newer than the latest version ({r.json()['tag_name']})")
                 return
