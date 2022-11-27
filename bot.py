@@ -253,6 +253,64 @@ def resetqueue(guildid):
     global temp
     os.remove(os.path.join(temp, str(guildid), "queue"))
 
+async def check_update():
+    try:
+        r = requests.get('https://api.github.com/repos/CoccodrillooXDS/TTS-bot/releases/latest')
+        if r.status_code == 200:
+            with open(os.path.join(root, 'version.ini'), 'r') as f:
+                    version = f.read()
+            if int(version) > r.json()['id'] and bot_version != r.json()['tag_name']:
+                print(f"-> Bot version ({bot_version}) is newer than the latest version ({r.json()['tag_name']})")
+                return
+            if bot_version != r.json()['tag_name'] and int(version) == r.json()['id']:
+                print(f"-> Bot version ({bot_version}) is newer than the latest version ({r.json()['tag_name']})")
+                return
+            if r.json()['tag_name'] != bot_version:
+                print(f"-> New version {r.json()['tag_name']} available!")
+            if int(version) != r.json()['id'] and bot_version == r.json()['tag_name']:
+                changelog = r.json()['body']
+                id = r.json()['id']
+                with open(os.path.join(root,'version.ini'), 'w') as versionfile:
+                    versionfile.write(str(id))
+                if use_ibm:
+                    upload_version()
+                silent = False
+                for attachment in r.json()['assets']:
+                    if attachment['name'] == "silent":
+                        silent = True
+                        break
+                if silent:
+                    print(f"-> A new silent version ({bot_version}) has been installed successfully!")
+                    return
+                else:
+                    print(f"-> A new version ({bot_version}) has been installed successfully!")
+                    for guild in bot.guilds:
+                        ctx = guild
+                        config = configparser.ConfigParser()
+                        config.read(os.path.join(configs, str(guild.id)), encoding='utf-8')
+                        if config['DEFAULT']['silenceupdates'] == "True":
+                            break
+                        embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'updatetitle')), description=eval("f" + get_guild_language(ctx, 'updatedesc')), color=0x286fad)
+                        try:
+                            if config['DEFAULT']['updateschannel'] == "system":
+                                await guild.get_channel(guild.system_channel.id).send(embed=embed)
+                            else:
+                                await guild.get_channel(int(config['DEFAULT']['updateschannel'])).send(embed=embed)
+                        except:
+                            try:
+                                for channel in guild.text_channels:
+                                    if channel.permissions_for(guild.me).send_messages:
+                                        await channel.send(embed=embed)
+                                        break
+                            except:
+                                pass
+                        
+        elif r.status_code == 403:
+            print("-> Unable to check for bot updates!")
+    except Exception as e:
+        print("-> An error occurred while checking for bot updates!")
+        print(logging.error(traceback.format_exc()))
+
 # --------------------------------------------------
 # IBM Cloud Internal functions
 # --------------------------------------------------
@@ -1185,6 +1243,7 @@ async def on_ready():
                 print(f"-> IBM credentials are invalid, skipping sync...")
                 use_ibm = False
     print(f"Checking for updates... (Step {str(an)}/{str(n)})")
+    await check_update()
     if use_ibm:
         download_version()
     if not os.path.exists(os.path.join(root,'version.ini')):
