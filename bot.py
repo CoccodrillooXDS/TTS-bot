@@ -1339,7 +1339,6 @@ async def on_message(message):
     except:
         await bot.process_commands(message)
         return
-    ctx = await bot.get_context(message)
     try:
         a = json.loads(config['DEFAULT']['autosaychan'])
     except KeyError:
@@ -1347,6 +1346,7 @@ async def on_message(message):
     if int(message.channel.id) in a:
         if message.author.bot:
             return
+        ctx = await bot.get_context(message)
         voice = config['DEFAULT']['defvoice']
         if message.content.startswith(tuple(punctuation)):
             voice = message.content[1:3]
