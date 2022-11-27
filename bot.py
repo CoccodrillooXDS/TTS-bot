@@ -30,7 +30,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 
 bot = bridge.Bot(
-    command_prefix=commands.when_mentioned_or('>'),
+    command_prefix=commands.when_mentioned,
     description="A bot to convert text to speech in a voice channel using Google TTS APIs.",
     intents=intents,
     auto_sync_commands=True,
@@ -419,7 +419,7 @@ def delete_config(item):
 # Languages available
 # --------------------------------------------------
 
-@bot.command(name="langs", description="List all available languages")
+@bot.slash_command(name="langs", description="List all available languages")
 async def langs(ctx):
     global supported_languages_message
     """ List all available languages """
