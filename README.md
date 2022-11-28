@@ -16,7 +16,7 @@ TTS is a **Text-to-Speech** bot for Discord. It uses the **[gTTS](https://pypi.o
 * Give your text a voice!
 * Read your text aloud!
 * Run on any platform!
-* Easily self-hostable on any server!
+* Easily self-hostable on any server (using Docker or manually)!
 * Easy to use!
 * It's free!
 
@@ -25,8 +25,6 @@ TTS is a **Text-to-Speech** bot for Discord. It uses the **[gTTS](https://pypi.o
 **The officially supported platforms are:**
 * Windows
 * Most Linux distributions
-
-(It may work on MacOS, but I haven't tested it)
 
 # **Hosting the bot**
 
@@ -41,9 +39,3 @@ To contribute, you can fork the repository and after you made your changes, you 
 
 # **License**
 This project is licensed under the [MIT license](LICENSE)
-
-# **TODO**
-
-- [ ] Implement Google Search Engine
-- [ ] Implement Google Translate
-- [ ] Implement new features!
