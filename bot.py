@@ -126,7 +126,11 @@ async def check_role(ctx):
     config = configparser.ConfigParser()
     config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
     try:
-        role = discord.utils.get(ctx.guild.roles, name=config['DEFAULT']['role'])
+        rolename = config['DEFAULT']['role']
+    except KeyError:
+        config['DEFAULT']['role'] = conf['role']
+    try:
+        role = discord.utils.get(ctx.guild.roles, name=rolename)
     except:
         config = configparser.ConfigParser()
         config.read(os.path.join(configs, str(ctx.guild.id)), encoding='utf-8')
@@ -1239,11 +1243,11 @@ async def on_guild_join(guild):
                 break
     new_fold = os.path.join(temp, str(guild.id))
     os.mkdir(new_fold)
-    if not os.path.exists(os.path.join(configs, str(guild.id))):
-        config = configparser.ConfigParser()
-        config['DEFAULT'] = conf
-        with open(os.path.join(configs, str(guild.id)), 'w') as configfile:
-            config.write(configfile)
+    conffile = os.path.join(configs, str(guild.id))
+    config = configparser.ConfigParser()
+    config['DEFAULT'] = conf
+    with open(conffile, 'w') as configfile:
+        config.write(configfile)
     print(f"New guild joined: {guild.name} ({guild.id})")
     await bot.change_presence(activity=discord.Game(name=f"/help | {len(bot.guilds)} servers"))
 
