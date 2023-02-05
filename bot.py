@@ -35,7 +35,7 @@ bot = bridge.Bot(
     activity=discord.Game(name="Loading..."),
 )
 
-bot_version = "v3.6.1"
+bot_version = "v3.6.2"
 
 # --------------------------------------------------
 # Folders
@@ -171,7 +171,12 @@ async def preplay(ctx, source):
         if voice.is_playing():
             if ctx.author.voice:
                 if voice.channel == ctx.author.voice.channel:
+                    try:
+                        await ctx.author.voice.channel.connect()
+                    except:
+                        pass
                     addqueue(source, ctx.guild)
+                    return True
                 else:
                     embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'errvoice')), color=0xFF0000)
                     await ctx.respond(embed=embed, delete_after=5)
@@ -186,6 +191,7 @@ async def preplay(ctx, source):
                     await voice.move_to(ctx.author.voice.channel)
                 addqueue(source, ctx.guild)
                 nextqueue(ctx.guild, ctx.author.voice.channel.id)
+                return True
             else:
                 embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'erruvc')), color=0xFF0000)
                 await ctx.respond(embed=embed, delete_after=5)
@@ -201,21 +207,26 @@ async def preplay(ctx, source):
             try:
                 voice = await ctx.author.voice.channel.connect()
             except:
-                pass
+                embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'errcantconnect')), color=0xFF0000)
+                await ctx.respond(embed=embed, delete_after=5)
+                return False
             addqueue(source, ctx.guild)
             nextqueue(ctx.guild, channid)
+            return True
         else:
             embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'errtitle')), description=eval("f" + get_guild_language(ctx, 'erruvc')), color=0xFF0000)
             await ctx.respond(embed=embed, delete_after=5)
             return False
-    return True
 
 def play(source, guild, channelid):
     try:
         voice = discord.utils.get(bot.voice_clients, guild=guild)
         if voice:
-            resettimer(guild)
-            voice.play(discord.FFmpegPCMAudio(source), after=lambda e: nextqueue(guild, channelid))
+            if voice.is_connected():
+                resettimer(guild)
+                voice.play(discord.FFmpegPCMAudio(source), after=lambda e: nextqueue(guild, channelid))
+            else:
+                resetqueue(guild.id)
         else:
             resetqueue(guild.id)        
     except Exception as e:
@@ -245,7 +256,12 @@ def nextqueue(guild, channelid):
             queue.pop(0)
             with open(os.path.join(temp, str(guild.id), "queue"), "wb") as f:
                 pickle.dump(queue, f)
-            play(source, guild, channelid)
+            voice = discord.utils.get(bot.voice_clients, guild=guild)
+            if voice:
+                if voice.channel.id == channelid:
+                    play(source, guild, channelid)
+                else:
+                    resetqueue(guild.id)
         else:
             os.remove(os.path.join(temp, str(guild.id), "queue"))
 
@@ -255,7 +271,7 @@ def resetqueue(guildid):
 
 async def check_update():
     try:
-        r = requests.get('https://api.github.com/repos/CoccodrillooXDS/TTS-bot/releases/latest')
+        r = requests.get('https://api.github.com/repos/CoccodrillooXDS/TTS-bot/releases/latest', timeout=5)
         if r.status_code == 200:
             with open(os.path.join(root, 'version.ini'), 'r') as f:
                 version = f.read()
