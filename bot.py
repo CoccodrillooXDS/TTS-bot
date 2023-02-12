@@ -35,7 +35,7 @@ bot = bridge.Bot(
     activity=discord.Game(name="Loading..."),
 )
 
-bot_version = "v3.6.2"
+bot_version = "v3.6.3"
 
 # --------------------------------------------------
 # Folders
@@ -438,7 +438,7 @@ async def say(ctx, lang: Option(str, "Choose a language", autocomplete=showlangs
         return
     if await preplay(ctx, source):
         embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), description=eval("f" + get_guild_language(ctx, 'saylangmess')), color=0x1eff00)
-        await ctx.respond(embed=embed, allowed_mentions=discord.AllowedMentions(replied_user=False))
+        await ctx.respond(embed=embed, allowed_mentions=discord.AllowedMentions(replied_user=False), silent=True)
 
 async def hidsay(ctx, lang, text):
     global temp
@@ -535,7 +535,7 @@ async def hidsay(ctx, lang, text):
         return
     if await preplay(ctx, source):
         embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), description=eval("f" + get_guild_language(ctx, 'saylangmess')), color=0x1eff00)
-        await ctx.respond(embed=embed, allowed_mentions=discord.AllowedMentions(replied_user=False), delete_after=1)
+        await ctx.respond(embed=embed, allowed_mentions=discord.AllowedMentions(replied_user=False), delete_after=1, silent=True)
 
 # --------------------------------------------------
 # Disconnect the bot from the voice channel

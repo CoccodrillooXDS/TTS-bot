@@ -1,5 +1,5 @@
-py-cord>=2.0.0
-py-cord[voice]>=2.0.0
+py-cord>=2.4.0
+py-cord[voice]>=2.4.0
 PyNaCl
 gtts
 asyncio
