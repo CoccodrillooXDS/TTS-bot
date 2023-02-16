@@ -35,7 +35,7 @@ bot = bridge.Bot(
     activity=discord.Game(name="Loading..."),
 )
 
-bot_version = "v3.6.3"
+bot_version = "v3.6.4"
 
 # --------------------------------------------------
 # Folders
@@ -438,7 +438,7 @@ async def say(ctx, lang: Option(str, "Choose a language", autocomplete=showlangs
         return
     if await preplay(ctx, source):
         embed=discord.Embed(title=eval("f" + get_guild_language(ctx, 'done')), description=eval("f" + get_guild_language(ctx, 'saylangmess')), color=0x1eff00)
-        await ctx.respond(embed=embed, allowed_mentions=discord.AllowedMentions(replied_user=False), silent=True)
+        await ctx.respond(embed=embed, allowed_mentions=discord.AllowedMentions(replied_user=False))
 
 async def hidsay(ctx, lang, text):
     global temp
